@@ -2,153 +2,141 @@
 
 from functools import lru_cache
 import io
-import re
 import unicodedata
 
 
 MODEL_NAME = "ddobokki/ko-trocr"
 ALLOWED_ENGINES = {"trocr", "easyocr"}
 MAX_IMAGE_PIXELS = 20_000_000
-CORRECTION_MODEL_NAME = "Soyoung97/gec_kr"
-MATH_MARKER_RE = re.compile(r"(?:\\[A-Za-z]+|[$=<>±×÷√∑∫^_{}+*/])")
-CIRCLED_PREFIX_RE = re.compile(r"^(\s*[①-⑳])\s*(.*)$")
-NUMBERED_PREFIX_RE = re.compile(r"^(\s*[1-9][.)．]?)\s+(.*)$")
+CORRECTION_MODEL_NAME = "Qwen/Qwen3-0.6B"
 
 
 @lru_cache(maxsize=1)
 def _load_correction_engine():
-    """Load a Korean grammatical-error-correction model on first use."""
+    """Load Qwen3-0.6B for contextual OCR correction on first use."""
     import torch
-    from transformers import BartForConditionalGeneration, PreTrainedTokenizerFast
+    from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    tokenizer = PreTrainedTokenizerFast.from_pretrained(CORRECTION_MODEL_NAME)
-    model = BartForConditionalGeneration.from_pretrained(CORRECTION_MODEL_NAME)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    tokenizer = AutoTokenizer.from_pretrained(CORRECTION_MODEL_NAME)
+    has_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if has_cuda else "cpu")
+    dtype = torch.float16 if has_cuda else torch.float32
+    model = AutoModelForCausalLM.from_pretrained(
+        CORRECTION_MODEL_NAME,
+        torch_dtype=dtype,
+    )
     try:
         model.to(device)
     except RuntimeError:
-        if device.type != "cuda":
+        if not has_cuda:
             raise
-        # OCR model may already occupy most GPU memory. Keep correction usable on CPU.
+        # TrOCR can already occupy most VRAM. Reload the small LLM on CPU if needed.
+        del model
         torch.cuda.empty_cache()
         device = torch.device("cpu")
+        model = AutoModelForCausalLM.from_pretrained(
+            CORRECTION_MODEL_NAME,
+            torch_dtype=torch.float32,
+        )
         model.to(device)
     model.eval()
     return tokenizer, model, device
 
 
-def _split_choice_prefix(line: str):
-    """Keep multiple-choice labels outside the generative correction model."""
-    match = CIRCLED_PREFIX_RE.match(line)
-    if match and match.group(2).strip():
-        return match.group(1).strip(), match.group(2).strip()
-    match = NUMBERED_PREFIX_RE.match(line)
-    if match and match.group(2).strip():
-        return match.group(1).strip(), match.group(2).strip()
-    return "", line.strip()
-
-
-def _should_correct_line(line: str) -> bool:
-    """Protect equations, symbol-heavy rows, and short non-sentence labels."""
-    prefix, body = _split_choice_prefix(line)
-    if len(re.findall(r"[가-힣]", body)) < 4:
-        return False
-    if MATH_MARKER_RE.search(line):
-        return False
-    if not re.search(r"[가-힣]", body):
-        return False
-    return True
-
-
-def _generate_corrected_line(text, tokenizer, model, device):
-    """Run one Korean sentence through Soyoung97's Korean GEC BART model."""
+def _generate_corrected_text(text, tokenizer, model, device):
+    """Use the full OCR output as context for Qwen3-0.6B."""
     import torch
 
-    token_ids = tokenizer.encode(text, add_special_tokens=False)
-    if not token_ids:
-        return text
-    if len(token_ids) > 150:
-        # Long lines are likely merged rows; don't truncate content to correct them.
-        raise ValueError("문장이 너무 길어 보정을 건너뜁니다.")
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "너는 한국어 시험지와 교재의 OCR 텍스트를 교정하는 엔진이다. "
+                "입력 전체를 문맥으로 활용해 잘못 인식된 글자, 붙어 있거나 빠진 띄어쓰기, "
+                "명백한 맞춤법 오류를 적극적으로 바로잡아라. 문맥상 필요한 경우 문장을 자연스럽게 "
+                "다듬어도 된다. 줄바꿈과 문항 순서는 가능한 유지하고 내용을 임의로 생략하지 마라. "
+                "숫자, 수식, 기호, 보기 번호는 가능한 보존하되 주변 문맥과 명백하게 충돌하는 OCR 오류는 "
+                "수정해도 된다. 설명이나 인사말 없이 교정된 텍스트만 출력하라."
+            ),
+        },
+        {
+            "role": "user",
+            "content": "다음은 OCR로 추출한 전체 텍스트다. 문맥을 참고해 교정해라.\n\n" + text,
+        },
+    ]
+    model_inputs = tokenizer.apply_chat_template(
+        messages,
+        tokenize=True,
+        add_generation_prompt=True,
+        enable_thinking=False,
+        return_dict=True,
+        return_tensors="pt",
+    )
+    model_inputs = {
+        key: value.to(device)
+        for key, value in model_inputs.items()
+    }
+    input_length = model_inputs["input_ids"].shape[-1]
+    if input_length > 28000:
+        raise ValueError("OCR 텍스트가 너무 길어 한 번에 문맥 교정을 수행할 수 없습니다.")
 
-    input_ids = []
-    if tokenizer.bos_token_id is not None:
-        input_ids.append(tokenizer.bos_token_id)
-    input_ids.extend(token_ids)
-    if tokenizer.eos_token_id is not None:
-        input_ids.append(tokenizer.eos_token_id)
-
-    tensor = torch.tensor([input_ids], dtype=torch.long, device=device)
-    max_length = min(192, max(64, len(input_ids) + 32))
+    max_new_tokens = min(4096, max(256, input_length + 128))
     with torch.inference_mode():
         generated = model.generate(
-            tensor,
-            max_length=max_length,
-            num_beams=4,
-            early_stopping=True,
-            repetition_penalty=2.0,
+            **model_inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            repetition_penalty=1.05,
+            pad_token_id=tokenizer.eos_token_id,
         )
-    return tokenizer.decode(generated[0], skip_special_tokens=True).strip()
+    generated_ids = generated[0][input_length:]
+    return tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
 
 
 def _correct_korean_text(text: str, report) -> str:
-    """Correct Korean typos/grammar line-by-line while preserving layout and equations."""
-    lines = text.split("\n")
-    eligible = [line for line in lines if _should_correct_line(line)]
-    if not eligible:
-        report("한국어 문장 교정 대상이 없어 원문을 유지합니다.")
+    """Correct the complete OCR result with a context-aware small language model."""
+    if not text.strip():
+        report("문맥 교정 대상이 없어 OCR 원문을 유지합니다.")
         return text
 
     report(
-        f"한국어 맞춤법·문장 교정 모델({CORRECTION_MODEL_NAME})을 준비합니다. "
-        "첫 실행 시 약 500MB 모델 다운로드가 필요합니다."
+        f"문맥 교정 모델({CORRECTION_MODEL_NAME})을 준비합니다. "
+        "첫 실행 시 약 1.5GB 모델 다운로드가 필요합니다."
     )
     try:
         tokenizer, model, device = _load_correction_engine()
     except Exception as exc:
         report(
-            "문장 교정 모델을 불러오지 못해 OCR 원문을 유지합니다. "
+            "문맥 교정 모델을 불러오지 못해 OCR 원문을 유지합니다. "
             f"({type(exc).__name__}: {str(exc)[:160]})"
         )
         return text
 
-    changed = 0
-    output = []
-    for line_number, line in enumerate(lines, start=1):
-        prefix, body = _split_choice_prefix(line)
-        if not _should_correct_line(line):
-            output.append(line)
-            continue
-        try:
-            corrected = _generate_corrected_line(body, tokenizer, model, device)
-        except Exception as exc:
-            report(
-                f"{line_number}번째 줄 교정 실패, 원문을 유지합니다. "
-                f"({type(exc).__name__}: {str(exc)[:120]})"
-            )
-            output.append(line)
-            continue
+    report("Qwen3-0.6B: OCR 결과 전체를 문맥으로 사용해 교정합니다.")
+    try:
+        corrected = _generate_corrected_text(text, tokenizer, model, device)
+    except Exception as exc:
+        report(
+            "문맥 교정에 실패해 OCR 원문을 유지합니다. "
+            f"({type(exc).__name__}: {str(exc)[:160]})"
+        )
+        return text
 
-        if not corrected:
-            output.append(line)
-            continue
-        corrected_line = f"{prefix} {corrected}".strip() if prefix else corrected
-        output.append(corrected_line)
-        if corrected_line != line.strip():
-            changed += 1
-            old_preview = line.strip()
-            new_preview = corrected_line
-            if len(old_preview) > 64:
-                old_preview = old_preview[:61] + "..."
-            if len(new_preview) > 64:
-                new_preview = new_preview[:61] + "..."
-            report(
-                f"맞춤법·문장 보정 ({line_number}번째 줄): "
-                f"{old_preview} → {new_preview}"
-            )
+    if not corrected:
+        report("문맥 교정 결과가 비어 있어 OCR 원문을 유지합니다.")
+        return text
 
-    report(f"한국어 맞춤법·문장 보정 완료: {changed}개 줄을 수정했습니다.")
-    return "\n".join(output)
+    if corrected != text:
+        old_preview = " ↵ ".join(text.splitlines())
+        new_preview = " ↵ ".join(corrected.splitlines())
+        if len(old_preview) > 96:
+            old_preview = old_preview[:93] + "..."
+        if len(new_preview) > 96:
+            new_preview = new_preview[:93] + "..."
+        report(f"Qwen3 교정 전: {old_preview}")
+        report(f"Qwen3 교정 후: {new_preview}")
+    report(f"Qwen3-0.6B 문맥 교정 완료: {len(text)}자 → {len(corrected)}자.")
+    return corrected
 
 
 @lru_cache(maxsize=1)
@@ -322,7 +310,7 @@ def extract_text(
     correct_text: bool = True,
     binarize: bool = True,
 ) -> str:
-    """Recognize text, with optional Korean GEC correction and TrOCR binarization."""
+    """Recognize text, with optional Qwen3 context correction and TrOCR binarization."""
     if engine not in ALLOWED_ENGINES:
         raise ValueError("지원하지 않는 OCR 모델입니다. TrOCR 또는 EasyOCR를 선택해 주세요.")
 
