@@ -9,9 +9,8 @@ from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 # 모델 생성 시 발생하는 UserWarning(max_length 관련) 숨기기
 warnings.filterwarnings("ignore", category=UserWarning)
 
-import unicodedata
 
-def normalize_text(text, ignore_space=True, normalize_quotes=True):
+def normalize_text(text, normalize_quotes=True):
     # 1. 유니코드 NFC 정규화 (NFD 자소 분리 방지)
     t = unicodedata.normalize('NFC', text)
     
@@ -24,16 +23,12 @@ def normalize_text(text, ignore_space=True, normalize_quotes=True):
         for q, rep in quote_map.items():
             t = t.replace(q, rep)
             
-    # 3. 띄어쓰기 제거
-    if ignore_space:
-        t = t.replace(" ", "")
-        
     return t.strip()
 
 
-def calculate_metrics(ref_text, hyp_text, ignore_space=True, normalize_quotes=True):
-    r = normalize_text(ref_text, ignore_space, normalize_quotes)
-    h = normalize_text(hyp_text, ignore_space, normalize_quotes)
+def calculate_metrics(ref_text, hyp_text, normalize_quotes=True):
+    r = normalize_text(ref_text, normalize_quotes)
+    h = normalize_text(hyp_text, normalize_quotes)
 
     dp = [[0] * (len(h) + 1) for _ in range(len(r) + 1)]
     for i in range(len(r) + 1):
@@ -75,7 +70,7 @@ def run_batch_evaluation(
     model = VisionEncoderDecoderModel.from_pretrained(model_name)
 
     print(f"\n총 {len(gt_lines)}개 줄에 대해 배치 평가를 시작합니다.")
-    print("(※ 유니코드 NFC 정규화 적용 및 띄어쓰기 무시 기준)")
+    print("(※ 유니코드 NFC 정규화 적용 및 공백 포함 비교 기준)")
     print("=" * 85)
     print(f"{'번호':^5} | {'이미지 파일':<15} | {'추론시간':^8} | {'일치율':^8} | {'상태':^6}")
     print("=" * 85)
@@ -111,7 +106,7 @@ def run_batch_evaluation(
 
         infer_time = time.perf_counter() - start_t
 
-        # 공백 제외 및 NFC 정규화 일치율 산출
+        # 공백을 보존한 상태에서 NFC 정규화 일치율 산출
         errors, acc = calculate_metrics(gt_text, ocr_result)
 
         total_acc += acc
@@ -130,8 +125,8 @@ def run_batch_evaluation(
                 "image_path": img_path,
                 "ground_truth": gt_text,
                 "ocr_result_nfc": ocr_result_nfc,
-                "errors_no_space": errors,
-                "accuracy_no_space": round(acc, 2),
+                "errors": errors,
+                "accuracy": round(acc, 2),
                 "infer_time_sec": round(infer_time, 4),
             }
         )
