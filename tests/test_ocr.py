@@ -78,7 +78,7 @@ class OCRRouteTests(unittest.TestCase):
         self.assertEqual(mocked_ocr.call_args.args[1], "easyocr")
 
     def test_ocr_stream_sends_progress_logs_and_result(self):
-        def fake_extract(_image_bytes, _engine, progress_callback=None, restore_spacing=True):
+        def fake_extract(_image_bytes, _engine, progress_callback=None, restore_spacing=True, binarize=True):
             progress_callback("테스트용 모델 준비 완료")
             progress_callback("TrOCR: 텍스트 인식 진행 중 (1/1개 영역)")
             return "첫 번째 항목 1 + 2"
@@ -146,7 +146,7 @@ class OCRRouteTests(unittest.TestCase):
             patch("ocr_service._segment_text_lines", return_value=[object()]),
         ):
             result = ocr_service.extract_text(
-                b"image-bytes", "trocr", restore_spacing=False
+                b"image-bytes", "trocr", restore_spacing=False, binarize=False
             )
 
         self.assertEqual(result, "공백 을 포함한 OCR 결과")
@@ -183,6 +183,56 @@ class OCRRouteTests(unittest.TestCase):
         self.assertTrue(all(reset for _, reset in spacer.seen))
         self.assertTrue(any("띄어쓰기 보정 완료" in message for message in logs))
 
+    def test_binarize_for_trocr_outputs_black_and_white_rgb(self):
+        from PIL import Image, ImageDraw
+
+        image = Image.new("RGB", (80, 30), "white")
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((5, 5, 35, 24), fill="black")
+
+        result = ocr_service._binarize_for_trocr(image)
+        gray_result = result.convert("L")
+        colors = gray_result.getcolors(maxcolors=256)
+
+        self.assertEqual(result.mode, "RGB")
+        self.assertIsNotNone(colors)
+        self.assertLessEqual(len(colors), 2)
+        self.assertEqual(set(gray_result.getdata()), {0, 255})
+
+    def test_trocr_binarizes_crops_before_processor_when_enabled(self):
+        torch_stub = ModuleType("torch")
+        torch_stub.inference_mode = nullcontext
+
+        crop = object()
+        processor = Mock()
+        processed = Mock()
+        pixel_values = Mock()
+        pixel_values.to.return_value = pixel_values
+        processed.pixel_values = pixel_values
+        processor.return_value = processed
+        processor.batch_decode.return_value = ["스캔 이미지"]
+        model = Mock()
+        model.generate.return_value = object()
+        loaded_engine = ("trocr", processor, model, "cpu")
+
+        with (
+            patch.dict(sys.modules, {"torch": torch_stub}),
+            patch("ocr_service._decode_image", return_value=object()),
+            patch("ocr_service._load_engine", return_value=loaded_engine),
+            patch("ocr_service._segment_text_lines", return_value=[crop]),
+            patch("ocr_service._binarize_for_trocr", return_value="binary-crop") as mock_binarize,
+        ):
+            result = ocr_service.extract_text(
+                b"image-bytes",
+                "trocr",
+                restore_spacing=False,
+                binarize=True,
+            )
+
+        self.assertEqual(result, "스캔 이미지")
+        mock_binarize.assert_called_once_with(crop)
+        self.assertEqual(processor.call_args.kwargs["images"], ["binary-crop"])
+
     def test_trocr_logs_and_preserves_unrecognized_rows(self):
         torch_stub = ModuleType("torch")
         torch_stub.inference_mode = nullcontext
@@ -210,6 +260,7 @@ class OCRRouteTests(unittest.TestCase):
                 "trocr",
                 progress_callback=logs.append,
                 restore_spacing=False,
+                binarize=False,
             )
 
         self.assertEqual(result, "제목\n\n③ 다음 선택지")

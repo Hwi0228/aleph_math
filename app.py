@@ -692,8 +692,12 @@ def ocr_page():
             else:
                 try:
                     restore_spacing = request.form.get("restore_spacing", "on") == "on"
+                    binarize = request.form.get("binarize", "on") == "on"
                     extracted_text = extract_text(
-                        image_bytes, engine, restore_spacing=restore_spacing
+                        image_bytes,
+                        engine,
+                        restore_spacing=restore_spacing,
+                        binarize=binarize,
                     )
                     if not extracted_text.strip():
                         extracted_text = None
@@ -725,6 +729,7 @@ def ocr_stream():
     if engine not in {"trocr", "easyocr"}:
         engine = "trocr"
     restore_spacing = request.form.get("restore_spacing", "on") == "on"
+    binarize = request.form.get("binarize", "on") == "on"
 
     def encode_event(event):
         return "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
@@ -765,6 +770,7 @@ def ocr_stream():
                 engine,
                 progress_callback=report_progress,
                 restore_spacing=restore_spacing,
+                binarize=binarize,
             )
             if not extracted_text.strip():
                 events.put({

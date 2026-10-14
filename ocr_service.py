@@ -228,13 +228,27 @@ def _segment_text_lines(image, progress_callback=None):
 
     return crops
 
+def _binarize_for_trocr(image):
+    """Apply Otsu binarization to a cropped scan before TrOCR inference."""
+    import cv2
+    import numpy as np
+    from PIL import Image
+
+    grayscale = np.asarray(image.convert("L"))
+    _, threshold = cv2.threshold(
+        grayscale, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    )
+    return Image.fromarray(threshold).convert("RGB")
+
+
 def extract_text(
     image_bytes: bytes,
     engine: str,
     progress_callback=None,
     restore_spacing: bool = True,
+    binarize: bool = True,
 ) -> str:
-    """Recognize text, optionally restoring Korean word spacing after OCR."""
+    """Recognize text, with optional Korean spacing correction and TrOCR binarization."""
     if engine not in ALLOWED_ENGINES:
         raise ValueError("지원하지 않는 OCR 모델입니다. TrOCR 또는 EasyOCR를 선택해 주세요.")
 
@@ -252,6 +266,10 @@ def extract_text(
         import torch
 
         _, processor, model, device = loaded
+        if binarize:
+            report("TrOCR: OCR 입력 크롭에 Otsu 이진화를 적용합니다.")
+        else:
+            report("TrOCR: OCR 입력 크롭 이진화를 사용하지 않습니다.")
         report("TrOCR: 텍스트 줄을 분할합니다.")
         crops = _segment_text_lines(image, progress_callback=report)
         report(f"TrOCR: 인식할 텍스트 줄 후보 {len(crops)}개를 찾았습니다.")
@@ -260,7 +278,12 @@ def extract_text(
         # Small batches reduce peak RAM/VRAM use on scanned worksheets.
         for start in range(0, len(crops), 8):
             batch = crops[start : start + 8]
-            pixel_values = processor(images=batch, return_tensors="pt").pixel_values.to(device)
+            model_images = (
+                [_binarize_for_trocr(crop) for crop in batch]
+                if binarize
+                else batch
+            )
+            pixel_values = processor(images=model_images, return_tensors="pt").pixel_values.to(device)
             with torch.inference_mode():
                 generated_ids = model.generate(pixel_values, max_new_tokens=160)
             decoded = processor.batch_decode(generated_ids, skip_special_tokens=True)
@@ -294,6 +317,8 @@ def extract_text(
     import numpy as np
 
     reader = loaded[1]
+    if binarize:
+        report("EasyOCR: 이진화 옵션은 TrOCR 전용이므로 원본 이미지를 사용합니다.")
     report("EasyOCR: 텍스트 영역을 검출하고 인식합니다.")
     detections = reader.readtext(np.asarray(image), detail=0, paragraph=False)
     lines = [
