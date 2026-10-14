@@ -120,8 +120,8 @@
               </label>
             </fieldset>
             <label class="model spacing-option">
-              <input type="checkbox" id="restore-spacing" name="restore_spacing" value="on" checked>
-              <span><strong>한국어 띄어쓰기 보정</strong><span>OCR 후처리로 누락된 띄어쓰기를 복원합니다. 수식·기호가 많은 줄은 그대로 둡니다.</span></span>
+              <input type="checkbox" id="correct-text" name="correct_text" value="on" checked>
+              <span><strong>한국어 맞춤법·문장 보정</strong><span>별도 한국어 문장 교정 모델로 오탈자와 띄어쓰기를 보정합니다. 수식·기호가 많은 줄과 선택지 번호는 보호합니다.</span></span>
             </label>
             <label class="model">
               <input type="checkbox" id="trocr-binarize" name="binarize" value="on" checked>
@@ -262,9 +262,9 @@
 
         try {
           const formData = new FormData(ocrForm);
-          const spacingOption = document.getElementById("restore-spacing");
+          const correctionOption = document.getElementById("correct-text");
           const binarizeOption = document.getElementById("trocr-binarize");
-          formData.set("restore_spacing", spacingOption.checked ? "on" : "off");
+          formData.set("correct_text", correctionOption.checked ? "on" : "off");
           formData.set("binarize", binarizeOption.checked ? "on" : "off");
           const csrfToken = formData.get("_csrf_token") || "";
           const response = await fetch(ocrForm.dataset.streamUrl, {

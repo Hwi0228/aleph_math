@@ -78,7 +78,7 @@ class OCRRouteTests(unittest.TestCase):
         self.assertEqual(mocked_ocr.call_args.args[1], "easyocr")
 
     def test_ocr_stream_sends_progress_logs_and_result(self):
-        def fake_extract(_image_bytes, _engine, progress_callback=None, restore_spacing=True, binarize=True):
+        def fake_extract(_image_bytes, _engine, progress_callback=None, correct_text=True, binarize=True):
             progress_callback("테스트용 모델 준비 완료")
             progress_callback("TrOCR: 텍스트 인식 진행 중 (1/1개 영역)")
             return "첫 번째 항목 1 + 2"
@@ -146,42 +146,52 @@ class OCRRouteTests(unittest.TestCase):
             patch("ocr_service._segment_text_lines", return_value=[object()]),
         ):
             result = ocr_service.extract_text(
-                b"image-bytes", "trocr", restore_spacing=False, binarize=False
+                b"image-bytes", "trocr", correct_text=False, binarize=False
             )
 
         self.assertEqual(result, "공백 을 포함한 OCR 결과")
 
-    def test_korean_spacing_restoration_keeps_math_lines_unchanged(self):
-        class FakeSpacer:
-            def __init__(self):
-                self.seen = []
-
-            def space(self, line, reset_whitespace=False):
-                self.seen.append((line, reset_whitespace))
-                if line.startswith("다음사진과지도"):
-                    return "다음 사진과 지도를 보고 이 지역의 지역성을 바르게 추론한 것은?"
-                return "① 계절풍의 영향으로 벼농사가 발달하였다."
-
-        spacer = FakeSpacer()
+    def test_korean_text_correction_preserves_math_and_choice_labels(self):
+        engine_stub = (object(), object(), "cpu")
         logs = []
+        inputs = []
+
+        def fake_correct_line(line, _tokenizer, _model, _device):
+            inputs.append(line)
+            corrections = {
+                "다음사진과지도롤보고이지역지역성을바르게추란것은?":
+                    "다음 사진과 지도를 보고 이 지역의 지역성을 바르게 추론한 것은?",
+                "계절풍의영향으로벼농사가발달하였다.":
+                    "계절풍의 영향으로 벼농사가 발달하였다.",
+            }
+            return corrections[line]
+
         text = (
             "다음사진과지도롤보고이지역지역성을바르게추란것은?\n"
-            "따라서 x^2 = 3이다\n"
+            "수식이 있는 줄 x^2 = 3이다\n"
             "①계절풍의영향으로벼농사가발달하였다."
         )
-
-        with patch("ocr_service._load_spacing_engine", return_value=spacer):
-            restored = ocr_service._restore_korean_spacing(text, logs.append)
+        with (
+            patch("ocr_service._load_correction_engine", return_value=engine_stub),
+            patch("ocr_service._generate_corrected_line", side_effect=fake_correct_line),
+        ):
+            corrected = ocr_service._correct_korean_text(text, logs.append)
 
         self.assertEqual(
-            restored,
+            corrected,
             "다음 사진과 지도를 보고 이 지역의 지역성을 바르게 추론한 것은?\n"
-            "따라서 x^2 = 3이다\n"
+            "수식이 있는 줄 x^2 = 3이다\n"
             "① 계절풍의 영향으로 벼농사가 발달하였다.",
         )
-        self.assertEqual(len(spacer.seen), 2)
-        self.assertTrue(all(reset for _, reset in spacer.seen))
-        self.assertTrue(any("띄어쓰기 보정 완료" in message for message in logs))
+        self.assertEqual(
+            inputs,
+            [
+                "다음사진과지도롤보고이지역지역성을바르게추란것은?",
+                "계절풍의영향으로벼농사가발달하였다.",
+            ],
+        )
+        self.assertTrue(any("맞춤법·문장 보정 완료" in message for message in logs))
+        self.assertTrue(any("① 계절풍" in message for message in logs))
 
     def test_binarize_for_trocr_outputs_black_and_white_rgb(self):
         from PIL import Image, ImageDraw
@@ -225,7 +235,7 @@ class OCRRouteTests(unittest.TestCase):
             result = ocr_service.extract_text(
                 b"image-bytes",
                 "trocr",
-                restore_spacing=False,
+                correct_text=False,
                 binarize=True,
             )
 
@@ -259,7 +269,7 @@ class OCRRouteTests(unittest.TestCase):
                 b"image-bytes",
                 "trocr",
                 progress_callback=logs.append,
-                restore_spacing=False,
+                correct_text=False,
                 binarize=False,
             )
 

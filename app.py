@@ -691,12 +691,12 @@ def ocr_page():
                 error = "선택한 파일이 비어 있습니다."
             else:
                 try:
-                    restore_spacing = request.form.get("restore_spacing", "on") == "on"
+                    correct_text = request.form.get("correct_text", "on") == "on"
                     binarize = request.form.get("binarize", "on") == "on"
                     extracted_text = extract_text(
                         image_bytes,
                         engine,
-                        restore_spacing=restore_spacing,
+                        correct_text=correct_text,
                         binarize=binarize,
                     )
                     if not extracted_text.strip():
@@ -728,7 +728,7 @@ def ocr_stream():
     engine = request.form.get("engine", "trocr")
     if engine not in {"trocr", "easyocr"}:
         engine = "trocr"
-    restore_spacing = request.form.get("restore_spacing", "on") == "on"
+    correct_text = request.form.get("correct_text", "on") == "on"
     binarize = request.form.get("binarize", "on") == "on"
 
     def encode_event(event):
@@ -769,7 +769,7 @@ def ocr_stream():
                 image_bytes,
                 engine,
                 progress_callback=report_progress,
-                restore_spacing=restore_spacing,
+                correct_text=correct_text,
                 binarize=binarize,
             )
             if not extracted_text.strip():

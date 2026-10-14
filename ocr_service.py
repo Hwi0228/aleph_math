@@ -9,39 +9,105 @@ import unicodedata
 MODEL_NAME = "ddobokki/ko-trocr"
 ALLOWED_ENGINES = {"trocr", "easyocr"}
 MAX_IMAGE_PIXELS = 20_000_000
-MATH_MARKER_RE = re.compile(r"(?:\\[A-Za-z]+|[$=<>±×÷√∑∫^_{}])")
+CORRECTION_MODEL_NAME = "Soyoung97/gec_kr"
+MATH_MARKER_RE = re.compile(r"(?:\\[A-Za-z]+|[$=<>±×÷√∑∫^_{}+*/])")
+CIRCLED_PREFIX_RE = re.compile(r"^(\s*[①-⑳])\s*(.*)$")
+NUMBERED_PREFIX_RE = re.compile(r"^(\s*[1-9][.)．]?)\s+(.*)$")
 
 
 @lru_cache(maxsize=1)
-def _load_spacing_engine():
-    """Load a Korean spacing corrector once per process."""
-    from kiwipiepy import Kiwi
+def _load_correction_engine():
+    """Load a Korean grammatical-error-correction model on first use."""
+    import torch
+    from transformers import BartForConditionalGeneration, PreTrainedTokenizerFast
 
-    return Kiwi()
+    tokenizer = PreTrainedTokenizerFast.from_pretrained(CORRECTION_MODEL_NAME)
+    model = BartForConditionalGeneration.from_pretrained(CORRECTION_MODEL_NAME)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    try:
+        model.to(device)
+    except RuntimeError:
+        if device.type != "cuda":
+            raise
+        # OCR model may already occupy most GPU memory. Keep correction usable on CPU.
+        torch.cuda.empty_cache()
+        device = torch.device("cpu")
+        model.to(device)
+    model.eval()
+    return tokenizer, model, device
 
 
-def _should_restore_spacing(line: str) -> bool:
-    """Avoid changing short labels, non-Korean text, and math-heavy lines."""
-    if len(re.findall(r"[가-힣]", line)) < 3:
+def _split_choice_prefix(line: str):
+    """Keep multiple-choice labels outside the generative correction model."""
+    match = CIRCLED_PREFIX_RE.match(line)
+    if match and match.group(2).strip():
+        return match.group(1).strip(), match.group(2).strip()
+    match = NUMBERED_PREFIX_RE.match(line)
+    if match and match.group(2).strip():
+        return match.group(1).strip(), match.group(2).strip()
+    return "", line.strip()
+
+
+def _should_correct_line(line: str) -> bool:
+    """Protect equations, symbol-heavy rows, and short non-sentence labels."""
+    prefix, body = _split_choice_prefix(line)
+    if len(re.findall(r"[가-힣]", body)) < 4:
         return False
     if MATH_MARKER_RE.search(line):
+        return False
+    if not re.search(r"[가-힣]", body):
         return False
     return True
 
 
-def _restore_korean_spacing(text: str, report) -> str:
-    """Restore missing Korean word spaces, preserving line breaks and math rows."""
+def _generate_corrected_line(text, tokenizer, model, device):
+    """Run one Korean sentence through Soyoung97's Korean GEC BART model."""
+    import torch
+
+    token_ids = tokenizer.encode(text, add_special_tokens=False)
+    if not token_ids:
+        return text
+    if len(token_ids) > 150:
+        # Long lines are likely merged rows; don't truncate content to correct them.
+        raise ValueError("문장이 너무 길어 보정을 건너뜁니다.")
+
+    input_ids = []
+    if tokenizer.bos_token_id is not None:
+        input_ids.append(tokenizer.bos_token_id)
+    input_ids.extend(token_ids)
+    if tokenizer.eos_token_id is not None:
+        input_ids.append(tokenizer.eos_token_id)
+
+    tensor = torch.tensor([input_ids], dtype=torch.long, device=device)
+    max_length = min(192, max(64, len(input_ids) + 32))
+    with torch.inference_mode():
+        generated = model.generate(
+            tensor,
+            max_length=max_length,
+            num_beams=4,
+            early_stopping=True,
+            repetition_penalty=2.0,
+        )
+    return tokenizer.decode(generated[0], skip_special_tokens=True).strip()
+
+
+def _correct_korean_text(text: str, report) -> str:
+    """Correct Korean typos/grammar line-by-line while preserving layout and equations."""
     lines = text.split("\n")
-    if not any(_should_restore_spacing(line) for line in lines):
-        report("한국어 문장 줄이 없어 띄어쓰기 보정을 건너뜁니다.")
+    eligible = [line for line in lines if _should_correct_line(line)]
+    if not eligible:
+        report("한국어 문장 교정 대상이 없어 원문을 유지합니다.")
         return text
 
-    report("한국어 띄어쓰기 보정기를 준비합니다.")
+    report(
+        f"한국어 맞춤법·문장 교정 모델({CORRECTION_MODEL_NAME})을 준비합니다. "
+        "첫 실행 시 약 500MB 모델 다운로드가 필요합니다."
+    )
     try:
-        spacer = _load_spacing_engine()
+        tokenizer, model, device = _load_correction_engine()
     except Exception as exc:
         report(
-            "띄어쓰기 보정기를 불러오지 못해 OCR 원문을 유지합니다. "
+            "문장 교정 모델을 불러오지 못해 OCR 원문을 유지합니다. "
             f"({type(exc).__name__}: {str(exc)[:160]})"
         )
         return text
@@ -49,31 +115,39 @@ def _restore_korean_spacing(text: str, report) -> str:
     changed = 0
     output = []
     for line_number, line in enumerate(lines, start=1):
-        if not _should_restore_spacing(line):
+        prefix, body = _split_choice_prefix(line)
+        if not _should_correct_line(line):
             output.append(line)
             continue
         try:
-            corrected = spacer.space(line, reset_whitespace=True).strip()
+            corrected = _generate_corrected_line(body, tokenizer, model, device)
         except Exception as exc:
             report(
-                f"띄어쓰기 보정 중 {line_number}번째 줄에서 오류가 발생해 원문을 유지합니다. "
-                f"({type(exc).__name__})"
+                f"{line_number}번째 줄 교정 실패, 원문을 유지합니다. "
+                f"({type(exc).__name__}: {str(exc)[:120]})"
             )
             output.append(line)
             continue
 
-        output.append(corrected or line)
-        if corrected and corrected != line.strip():
+        if not corrected:
+            output.append(line)
+            continue
+        corrected_line = f"{prefix} {corrected}".strip() if prefix else corrected
+        output.append(corrected_line)
+        if corrected_line != line.strip():
             changed += 1
             old_preview = line.strip()
-            new_preview = corrected
-            if len(old_preview) > 56:
-                old_preview = old_preview[:53] + "..."
-            if len(new_preview) > 56:
-                new_preview = new_preview[:53] + "..."
-            report(f"띄어쓰기 보정 ({line_number}번째 줄): {old_preview} → {new_preview}")
+            new_preview = corrected_line
+            if len(old_preview) > 64:
+                old_preview = old_preview[:61] + "..."
+            if len(new_preview) > 64:
+                new_preview = new_preview[:61] + "..."
+            report(
+                f"맞춤법·문장 보정 ({line_number}번째 줄): "
+                f"{old_preview} → {new_preview}"
+            )
 
-    report(f"한국어 띄어쓰기 보정 완료: {changed}개 줄을 수정했습니다.")
+    report(f"한국어 맞춤법·문장 보정 완료: {changed}개 줄을 수정했습니다.")
     return "\n".join(output)
 
 
@@ -245,10 +319,10 @@ def extract_text(
     image_bytes: bytes,
     engine: str,
     progress_callback=None,
-    restore_spacing: bool = True,
+    correct_text: bool = True,
     binarize: bool = True,
 ) -> str:
-    """Recognize text, with optional Korean spacing correction and TrOCR binarization."""
+    """Recognize text, with optional Korean GEC correction and TrOCR binarization."""
     if engine not in ALLOWED_ENGINES:
         raise ValueError("지원하지 않는 OCR 모델입니다. TrOCR 또는 EasyOCR를 선택해 주세요.")
 
@@ -308,10 +382,10 @@ def extract_text(
             report(f"TrOCR: 텍스트 인식 진행 중 ({completed}/{len(crops)}개 줄)")
         result = "\n".join(recognized_lines).strip()
         report(f"TrOCR: 인식 완료 ({recognized_count}/{len(crops)}개 줄에서 텍스트를 얻었습니다).")
-        if restore_spacing and result:
-            result = _restore_korean_spacing(result, report)
+        if correct_text and result:
+            result = _correct_korean_text(result, report)
         else:
-            report("한국어 띄어쓰기 보정을 사용하지 않습니다.")
+            report("한국어 맞춤법·문장 보정을 사용하지 않습니다.")
         return result
 
     import numpy as np
@@ -328,8 +402,8 @@ def extract_text(
     ]
     report(f"EasyOCR: 텍스트 영역 {len(lines)}개 인식 완료.")
     result = "\n".join(lines).strip()
-    if restore_spacing and result:
-        result = _restore_korean_spacing(result, report)
+    if correct_text and result:
+        result = _correct_korean_text(result, report)
     else:
-        report("한국어 띄어쓰기 보정을 사용하지 않습니다.")
+        report("한국어 맞춤법·문장 보정을 사용하지 않습니다.")
     return result
