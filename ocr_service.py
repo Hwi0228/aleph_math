@@ -2,12 +2,81 @@
 
 from functools import lru_cache
 import io
+import re
 import unicodedata
 
 
 MODEL_NAME = "ddobokki/ko-trocr"
 ALLOWED_ENGINES = {"trocr", "easyocr"}
 MAX_IMAGE_PIXELS = 20_000_000
+MATH_MARKER_RE = re.compile(r"(?:\\[A-Za-z]+|[$=<>±×÷√∑∫^_{}])")
+
+
+@lru_cache(maxsize=1)
+def _load_spacing_engine():
+    """Load a Korean spacing corrector once per process."""
+    from kiwipiepy import Kiwi
+
+    return Kiwi()
+
+
+def _should_restore_spacing(line: str) -> bool:
+    """Avoid changing short labels, non-Korean text, and math-heavy lines."""
+    if len(re.findall(r"[가-힣]", line)) < 3:
+        return False
+    if MATH_MARKER_RE.search(line):
+        return False
+    return True
+
+
+def _restore_korean_spacing(text: str, report) -> str:
+    """Restore missing Korean word spaces, preserving line breaks and math rows."""
+    lines = text.split("\n")
+    if not any(_should_restore_spacing(line) for line in lines):
+        report("한국어 문장 줄이 없어 띄어쓰기 보정을 건너뜁니다.")
+        return text
+
+    report("한국어 띄어쓰기 보정기를 준비합니다.")
+    try:
+        spacer = _load_spacing_engine()
+    except Exception as exc:
+        report(
+            "띄어쓰기 보정기를 불러오지 못해 OCR 원문을 유지합니다. "
+            f"({type(exc).__name__}: {str(exc)[:160]})"
+        )
+        return text
+
+    changed = 0
+    output = []
+    for line_number, line in enumerate(lines, start=1):
+        if not _should_restore_spacing(line):
+            output.append(line)
+            continue
+        try:
+            corrected = spacer.space(line, reset_whitespace=True).strip()
+        except Exception as exc:
+            report(
+                f"띄어쓰기 보정 중 {line_number}번째 줄에서 오류가 발생해 원문을 유지합니다. "
+                f"({type(exc).__name__})"
+            )
+            output.append(line)
+            continue
+
+        output.append(corrected or line)
+        if corrected and corrected != line.strip():
+            changed += 1
+            old_preview = line.strip()
+            new_preview = corrected
+            if len(old_preview) > 56:
+                old_preview = old_preview[:53] + "..."
+            if len(new_preview) > 56:
+                new_preview = new_preview[:53] + "..."
+            report(f"띄어쓰기 보정 ({line_number}번째 줄): {old_preview} → {new_preview}")
+
+    report(f"한국어 띄어쓰기 보정 완료: {changed}개 줄을 수정했습니다.")
+    return "\n".join(output)
+
+
 @lru_cache(maxsize=1)
 def _load_engine(engine: str):
     """Load only the most recently selected engine and reuse it across requests."""
@@ -159,8 +228,13 @@ def _segment_text_lines(image, progress_callback=None):
 
     return crops
 
-def extract_text(image_bytes: bytes, engine: str, progress_callback=None) -> str:
-    """Recognize Korean/English text using the user-selected OCR engine."""
+def extract_text(
+    image_bytes: bytes,
+    engine: str,
+    progress_callback=None,
+    restore_spacing: bool = True,
+) -> str:
+    """Recognize text, optionally restoring Korean word spacing after OCR."""
     if engine not in ALLOWED_ENGINES:
         raise ValueError("지원하지 않는 OCR 모델입니다. TrOCR 또는 EasyOCR를 선택해 주세요.")
 
@@ -211,6 +285,10 @@ def extract_text(image_bytes: bytes, engine: str, progress_callback=None) -> str
             report(f"TrOCR: 텍스트 인식 진행 중 ({completed}/{len(crops)}개 줄)")
         result = "\n".join(recognized_lines).strip()
         report(f"TrOCR: 인식 완료 ({recognized_count}/{len(crops)}개 줄에서 텍스트를 얻었습니다).")
+        if restore_spacing and result:
+            result = _restore_korean_spacing(result, report)
+        else:
+            report("한국어 띄어쓰기 보정을 사용하지 않습니다.")
         return result
 
     import numpy as np
@@ -225,4 +303,8 @@ def extract_text(image_bytes: bytes, engine: str, progress_callback=None) -> str
     ]
     report(f"EasyOCR: 텍스트 영역 {len(lines)}개 인식 완료.")
     result = "\n".join(lines).strip()
+    if restore_spacing and result:
+        result = _restore_korean_spacing(result, report)
+    else:
+        report("한국어 띄어쓰기 보정을 사용하지 않습니다.")
     return result

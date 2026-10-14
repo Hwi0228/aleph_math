@@ -691,7 +691,10 @@ def ocr_page():
                 error = "선택한 파일이 비어 있습니다."
             else:
                 try:
-                    extracted_text = extract_text(image_bytes, engine)
+                    restore_spacing = request.form.get("restore_spacing", "on") == "on"
+                    extracted_text = extract_text(
+                        image_bytes, engine, restore_spacing=restore_spacing
+                    )
                     if not extracted_text.strip():
                         extracted_text = None
                         error = "문자를 찾지 못했습니다. 이미지가 선명한지 확인하거나 다른 OCR 모델을 선택해 보세요."
@@ -721,6 +724,8 @@ def ocr_stream():
     engine = request.form.get("engine", "trocr")
     if engine not in {"trocr", "easyocr"}:
         engine = "trocr"
+    restore_spacing = request.form.get("restore_spacing", "on") == "on"
+
     def encode_event(event):
         return "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
 
@@ -756,7 +761,10 @@ def ocr_stream():
     def run_ocr():
         try:
             extracted_text = extract_text(
-                image_bytes, engine, progress_callback=report_progress
+                image_bytes,
+                engine,
+                progress_callback=report_progress,
+                restore_spacing=restore_spacing,
             )
             if not extracted_text.strip():
                 events.put({

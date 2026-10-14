@@ -119,6 +119,10 @@
                 <span><strong>EasyOCR</strong><span>한국어·영어 문자 영역을 검출하고 인식</span></span>
               </label>
             </fieldset>
+            <label class="model spacing-option">
+              <input type="checkbox" id="restore-spacing" name="restore_spacing" value="on" checked>
+              <span><strong>한국어 띄어쓰기 보정</strong><span>OCR 후처리로 누락된 띄어쓰기를 복원합니다. 수식·기호가 많은 줄은 그대로 둡니다.</span></span>
+            </label>
             <label class="file-field">문제 이미지
               <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,image/png,image/jpeg,image/webp,image/bmp,image/tiff" required>
               <span class="hint">PNG, JPG, WEBP, BMP, TIFF · 최대 12MB · 2,000만 픽셀 이하</span>
@@ -254,6 +258,8 @@
 
         try {
           const formData = new FormData(ocrForm);
+          const spacingOption = document.getElementById("restore-spacing");
+          formData.set("restore_spacing", spacingOption.checked ? "on" : "off");
           const csrfToken = formData.get("_csrf_token") || "";
           const response = await fetch(ocrForm.dataset.streamUrl, {
             method: "POST",
