@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f7f8">
-  <title>문제 DB | 콴다조교</title>
+  <title>문제 DB | ProbOCR</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
   <style>
     :root {
       color-scheme: light;
@@ -104,6 +105,11 @@
       font-size: 10px;
     }
     .sidebar-spacer { flex: 1; min-height: 16px; }
+    .account-footer { display: grid; gap: 7px; margin-top: auto; padding: 10px 3px 0; border-top: 1px solid var(--line); }
+    .account-name { overflow: hidden; color: #535a61; font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .account-role { color: #9299a1; font-size: 9px; }
+    .account-link { color: #4388eb; font-size: 10px; text-decoration: none; }
+    .account-footer button { padding: 5px 0; border: 0; background: transparent; color: #737a81; font: inherit; font-size: 10px; text-align: left; cursor: pointer; }
 
     .filter-panel {
       display: flex;
@@ -140,6 +146,8 @@
       background: #fff;
       font-size: 10px;
       cursor: pointer;
+      line-height: 28px;
+      text-decoration: none;
     }
     .subject-tab.selected {
       border-color: #82b8ff;
@@ -196,6 +204,21 @@
     .tree-item.muted { color: #a5aab0; }
     .tree-item .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .empty-state { padding: 16px 8px; color: #9299a1; font-size: 10px; text-align: center; }
+    .folder-tree { display: grid; gap: 2px; }
+    .folder-node { min-width: 0; }
+    .folder-row { display: flex; min-width: 0; align-items: center; }
+    .folder-link { display: flex; min-width: 0; min-height: 31px; flex: 1; align-items: center; gap: 7px; padding: 0 5px; border-radius: 7px; color: #535a61; font-size: 10px; text-decoration: none; }
+    .folder-link:hover { background: #f5f7f9; }
+    .folder-link.selected { background: #eff7ff; color: #2475dc; font-weight: 700; }
+    .folder-icon { color: #87929d; }
+    .folder-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .folder-count { margin-left: auto; color: #9299a1; font-size: 9px; }
+    .folder-children { margin-left: 12px; padding-left: 5px; border-left: 1px solid #eceef0; }
+    .folder-create { display: grid; gap: 7px; margin: 8px 0 2px; padding: 9px; border: 1px solid #eceef0; border-radius: 9px; background: #fff; }
+    .folder-create input, .folder-create select, .question-folder-form select { min-width: 0; height: 29px; padding: 0 7px; border: 1px solid #e7e9eb; border-radius: 7px; background: #fff; color: #535a61; font: inherit; font-size: 10px; }
+    .folder-create button, .question-folder-form button { min-height: 28px; border: 0; border-radius: 7px; background: #3183f6; color: #fff; font-size: 10px; font-weight: 700; cursor: pointer; }
+    .folder-notice { margin: 7px 2px; color: #28794d; font-size: 10px; }
+    .folder-error { margin: 7px 2px; color: #b43c3c; font-size: 10px; }
     .outline-button {
       display: flex;
       min-height: 32px;
@@ -299,9 +322,6 @@
     .choice { display: flex; align-items: baseline; gap: 5px; }
     .choice-number { color: #41474d; font-weight: 700; }
     .math { font-family: "Times New Roman", serif; font-size: 15px; }
-    .card-bottom { display: flex; min-width: 0; align-items: center; gap: 5px; }
-    .card-bottom .tag { min-width: 0; max-width: 48%; height: 20px; overflow: hidden; text-overflow: ellipsis; }
-    .tag.difficulty { background: #fff8e8; color: #d79a09; }
     .card-meta {
       min-width: 0;
       margin-top: 7px;
@@ -313,8 +333,13 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .db-chip { display: inline-flex; align-items: center; gap: 3px; margin-right: 6px; padding: 2px 6px; border: 1px solid #e7e9eb; border-radius: 8px; color: #737a81; }
-
+    .question-folder-form { display: flex; gap: 5px; margin-top: 7px; }
+    .question-folder-form select { flex: 1; }
+    .question-folder-form button { padding: 0 9px; }
+    .math-content { white-space: pre-wrap; }
+    .card-field { margin-bottom: 7px; }
+    .card-field-label { display: block; margin-bottom: 2px; color: #858c93; font-size: 9px; font-weight: 700; }
+    .card-answer { padding: 5px 7px; border-radius: 7px; background: #f1f8f4; color: #33794f; }
     .settings {
       min-width: 0;
       min-height: 0;
@@ -401,31 +426,39 @@
   </style>
 </head>
 <body>
+  {% macro render_folder(folder) %}
+  <div class="folder-node">
+    <div class="folder-row">
+      <a class="folder-link{% if folder.uuid == selected_folder_uuid %} selected{% endif %}" href="{{ url_for('main', subject=selected_subject, folder=folder.uuid, user_uuid=selected_user_uuid if selected_user_uuid != current_user.uuid else None) }}" aria-current="{{ 'page' if folder.uuid == selected_folder_uuid else 'false' }}">
+        <span class="folder-icon" aria-hidden="true">▰</span>
+        <span class="folder-name">{{ folder.name }}</span>
+        <span class="folder-count">{{ folder.count }}</span>
+      </a>
+    </div>
+    {% if folder.children %}<div class="folder-children">{% for child in folder.children %}{{ render_folder(child) }}{% endfor %}</div>{% endif %}
+  </div>
+  {% endmacro %}
   <div class="app">
     <aside class="sidebar" aria-label="주 메뉴">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>콴다조교</div>
-      {% for section in nav_sections %}
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>ProbOCR</div>
       <nav class="nav-section">
-        {% if section.label %}<div class="nav-label">{{ section.label }}</div>{% endif %}
-        {% for item in section["items"] %}
-        {% if item.endpoint %}<a class="nav-link{% if item.active %} active{% endif %}" href="{{ url_for(item.endpoint) }}"{% if item.active %} aria-current="page"{% endif %}>
-        {% else %}<button class="nav-link" type="button">
-        {% endif %}
+        <div class="nav-label">문제 관리</div>
+        {% for item in nav_items %}
+        <a class="nav-link{% if item.endpoint == 'main' %} active{% endif %}" href="{{ url_for(item.endpoint) }}"{% if item.endpoint == 'main' %} aria-current="page"{% endif %}>
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
           <span class="nav-label-text">{{ item.label }}</span>
-        {% if item.endpoint %}</a>{% else %}</button>{% endif %}
+        </a>
         {% endfor %}
       </nav>
-      {% endfor %}
-      <div class="sidebar-spacer"></div>
-      <nav class="nav-section">
-        {% for item in bottom_nav_items %}
-        <button class="nav-link">
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
-          <span class="nav-label-text">{{ item.label }}</span>
-        </button>
-        {% endfor %}
-      </nav>
+      <div class="account-footer">
+        <div class="account-name">{{ current_user.display_name }}</div>
+        <div class="account-role">{{ '관리자' if current_user.role == 'admin' else '사용자' }}</div>
+        {% if current_user.role == 'admin' %}<a class="account-link" href="{{ url_for('admin_users') }}">계정별 데이터</a>{% endif %}
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">로그아웃</button>
+        </form>
+      </div>
     </aside>
 
     <aside class="filter-panel" aria-label="문제 DB 필터">
@@ -433,18 +466,38 @@
       <div class="filter-body">
         <div class="subject-tabs" role="tablist" aria-label="과목">
           {% for subject in subjects %}
-          <button class="subject-tab{% if subject == selected_subject %} selected{% endif %}" role="tab" aria-selected="{{ 'true' if subject == selected_subject else 'false' }}">{{ subject }}</button>
+          <a class="subject-tab{% if subject == selected_subject %} selected{% endif %}" role="tab" aria-selected="{{ 'true' if subject == selected_subject else 'false' }}" href="{{ url_for('main', subject=subject, folder=selected_folder_uuid, user_uuid=selected_user_uuid if selected_user_uuid != current_user.uuid else None) }}">{{ subject }}</a>
           {% endfor %}
         </div>
-        <div class="tree-heading"><span class="chevron">⌄</span><span>📁</span> 내 DB <button class="text-button" type="button" aria-label="폴더 추가">＋</button></div>
-        {% for folder in user_folders %}
-        <label class="tree-item indent"><input type="checkbox"><span class="truncate">{{ folder }}</span></label>
+        {% if selected_user_uuid != current_user.uuid %}<p class="folder-notice">{{ selected_user.display_name }}님의 데이터 보기</p>{% endif %}
+        <div class="tree-heading"><span class="chevron" aria-hidden="true">⌄</span>{% if selected_user_uuid == current_user.uuid %}내 폴더{% else %}{{ selected_user.display_name }}님의 폴더{% endif %}</div>
+        {% if folder_added %}<p class="folder-notice" role="status">폴더를 만들었습니다.</p>{% endif %}
+        {% if folder_moved %}<p class="folder-notice" role="status">문제를 이동했습니다.</p>{% endif %}
+        {% if folder_error == 'duplicate' %}<p class="folder-error" role="alert">같은 위치에 같은 이름의 폴더가 이미 있습니다.</p>{% endif %}
+        {% if folder_tree %}
+        <div class="folder-tree">
+          {% for folder in folder_tree %}{{ render_folder(folder) }}{% endfor %}
+        </div>
         {% else %}
-        <p class="empty-state">추가한 폴더가 없습니다.</p>
-        {% endfor %}
+        <p class="empty-state">아직 만든 폴더가 없습니다.</p>
+        {% endif %}
+        {% if can_manage_questions %}<details>
+          <summary class="tree-heading">＋ 새 폴더</summary>
+          <form class="folder-create" method="post" action="{{ url_for('new_folder') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="subject" value="{{ selected_subject }}">
+            {% if selected_folder_uuid %}<input type="hidden" name="current_folder" value="{{ selected_folder_uuid }}">{% endif %}
+            <input name="name" maxlength="100" placeholder="폴더 이름" aria-label="폴더 이름" required>
+            <select name="parent_uuid" aria-label="상위 폴더">
+              <option value="">최상위 폴더</option>
+              {% for folder in folder_options %}
+              <option value="{{ folder.uuid }}">{% for _ in range(folder.depth) %}　{% endfor %}{{ folder.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">폴더 만들기</button>
+          </form>
+        </details>{% endif %}
       </div>
-      <button class="outline-button browse-button" type="button">▣ 문제 보관하기 <span aria-hidden="true">›</span></button>
-      <div class="panel-footer"><span>◉ 필터 정리 툴</span><span>›</span></div>
     </aside>
 
     <main class="results">
@@ -453,40 +506,56 @@
         <select class="select-control" aria-label="정렬">
           <option>출처순</option>
         </select>
-        <a class="detail-button" href="{{ url_for('new_question') }}">문제 등록</a>
+        {% if can_manage_questions %}<a class="detail-button" href="{{ url_for('new_question') }}">문제 등록</a>{% endif %}
       </header>
       <div class="result-area">
+        {% if current_user.role == 'admin' %}<a class="detail-button" href="{{ url_for('admin_users') }}">계정별 데이터 관리</a>{% endif %}
+        {% if selected_user_uuid != current_user.uuid %}<p class="folder-notice">{{ selected_user.display_name }}님 계정의 문제 조회 중</p>{% endif %}
         {% if added %}<p class="success-message" role="status">문제를 등록했습니다.</p>{% endif %}
+        {% if selected_folder_name %}<p class="success-message">{{ selected_folder_name }} 폴더의 문제</p>{% endif %}
         <div class="question-grid">
           {% for question in questions %}
           <article class="question-card">
             <div class="card-top">
               <input class="question-check" type="checkbox" aria-label="문제 선택">
               <span class="tag subject">{{ question.subject }}</span>
-              <span class="tag">{{ question.question_type }}</span>
-              <span class="tag">{{ question.points }}점</span>
+              {% if question.grade %}<span class="tag">{{ question.grade }}</span>{% endif %}
+              {% if question.unit %}<span class="tag">{{ question.unit }}</span>{% endif %}
+              {% if question.folder_name %}<span class="tag">{{ question.folder_name }}</span>{% endif %}
               <button class="detail-button" type="button">자세히</button>
             </div>
             <div class="question-content">
-              <p>{{ question.prompt }}</p>
+              {% if question.passage %}<div class="card-field math-content">{{ question.passage }}</div>{% endif %}
+              {% if question.examples %}<div class="card-field"><span class="card-field-label">보기</span><div class="math-content">{{ question.examples }}</div></div>{% endif %}
+              <p class="math-content">{{ question.prompt }}</p>
               <div class="choices">
                 {% for choice in question.choices %}
-                <div class="choice"><span class="choice-number">{{ '①②③④⑤'[loop.index0] }}</span>{{ choice }}</div>
+                <div class="choice math-content"><span class="choice-number">{{ '①②③④⑤'[loop.index0] if loop.index0 < 5 else loop.index ~ '.' }}</span>{{ choice }}</div>
                 {% endfor %}
               </div>
-            </div>
-            <div class="card-bottom">
-              {% if question.difficulty %}<span class="tag difficulty">난이도 {{ question.difficulty }}</span>{% endif %}
-              {% if question.topic %}<span class="tag">{{ question.topic }}</span>{% endif %}
-              {% if question.keyword %}<span class="tag">{{ question.keyword }}</span>{% endif %}
+              {% if question.answer %}<div class="card-field card-answer"><span class="card-field-label">답</span><div class="math-content">{{ question.answer }}</div></div>{% endif %}
             </div>
             {% if question.year or question.page or question.source %}
             <div class="card-meta">
               {% if question.year %}{{ question.year }}년{% endif %}
-              {% if question.page %} · {{ question.page }}페이지{% endif %}
-              {% if question.source %} · {{ question.source }}{% endif %}
+              {% if question.year and (question.page or question.source) %} · {% endif %}
+              {% if question.page %}{{ question.page }}페이지{% endif %}
+              {% if question.page and question.source %} · {% endif %}
+              {% if question.source %}{{ question.source }}{% endif %}
             </div>
             {% endif %}
+            {% if can_manage_questions %}<form class="question-folder-form" method="post" action="{{ url_for('move_question', question_id=question.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="subject" value="{{ selected_subject }}">
+              {% if selected_folder_uuid %}<input type="hidden" name="current_folder" value="{{ selected_folder_uuid }}">{% endif %}
+              <select name="folder_uuid" aria-label="문제를 넣을 폴더">
+                <option value="">폴더 미지정</option>
+                {% for folder in folder_options %}
+                <option value="{{ folder.uuid }}"{% if question.folder_uuid == folder.uuid %} selected{% endif %}>{% for _ in range(folder.depth) %}　{% endfor %}{{ folder.name }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit">이동</button>
+            </form>{% endif %}
           </article>
           {% else %}
           <p class="empty-state">표시할 문제가 없습니다.</p>
@@ -529,15 +598,18 @@
       </section>
     </aside>
   </div>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
   <script>
-    document.querySelectorAll(".subject-tab").forEach((tab) => {
-      tab.addEventListener("click", () => {
-        document.querySelectorAll(".subject-tab").forEach((item) => {
-          item.classList.remove("selected");
-          item.setAttribute("aria-selected", "false");
-        });
-        tab.classList.add("selected");
-        tab.setAttribute("aria-selected", "true");
+    window.addEventListener("DOMContentLoaded", () => {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "\\[", right: "\\]", display: true },
+          { left: "\\(", right: "\\)", display: false },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
       });
     });
 

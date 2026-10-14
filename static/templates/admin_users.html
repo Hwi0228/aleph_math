@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>계정별 데이터 | ProbOCR</title>
+  <style>
+    :root { font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #292d32; background: #f6f7f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 28px 18px; }
+    main { width: min(100%, 820px); margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    h1 { margin: 0; font-size: 20px; }
+    a { color: #3183f6; }
+    .user-list { display: grid; gap: 10px; }
+    .user-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid #eceef0; border-radius: 12px; background: #fff; }
+    .user-name { font-weight: 700; }
+    .user-meta { margin-top: 5px; color: #858c93; font-size: 12px; }
+    .view-link { flex: 0 0 auto; padding: 8px 11px; border-radius: 8px; background: #eff7ff; font-size: 12px; text-decoration: none; }
+    .empty { color: #858c93; text-align: center; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>계정별 데이터 관리</h1>
+      <a href="{{ url_for('main') }}">문제 DB로 돌아가기</a>
+    </header>
+    <section class="user-list" aria-label="사용자 계정">
+      {% for user in users %}
+      <article class="user-card">
+        <div>
+          <div class="user-name">{{ user.display_name }}{% if user.role == 'admin' %} · 관리자{% endif %}</div>
+          <div class="user-meta">{{ user.email }} · 문제 {{ user.question_count }}개</div>
+        </div>
+        <a class="view-link" href="{{ url_for('main', user_uuid=user.uuid) }}">문제 보기</a>
+      </article>
+      {% else %}
+      <p class="empty">등록된 계정이 없습니다.</p>
+      {% endfor %}
+    </section>
+  </main>
+</body>
+</html>

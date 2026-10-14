@@ -4,3 +4,4 @@ ocr_model_competiton/cropped_lines
 instance/*.sqlite3
 instance/*.sqlite3-shm
 instance/*.sqlite3-wal
+instance/.secret_key

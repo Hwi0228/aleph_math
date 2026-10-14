@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f7f8">
-  <title>문제 등록 | 콴다조교</title>
+  <title>문제 등록 | ProbOCR</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
   <style>
     :root {
       font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -27,7 +28,9 @@
     .nav-link.active { background: #f1f2f3; color: #202429; font-weight: 750; }
     .nav-icon { display: inline-grid; width: 16px; flex: 0 0 16px; place-items: center; color: #8b9299; font-size: 14px; }
     .nav-label { margin: 16px 5px 4px; color: #a0a6ac; font-size: 10px; }
-    .sidebar-spacer { flex: 1; min-height: 16px; }
+    .account-footer { margin-top: auto; padding: 12px 5px 0; border-top: 1px solid var(--line); color: #737a81; font-size: 10px; }
+    .account-footer form { margin-top: 7px; }
+    .account-footer button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
     main { min-width: 0; padding: 28px; }
     .page-header { display: flex; max-width: 760px; align-items: center; justify-content: space-between; gap: 12px; margin: 0 auto 18px; }
     h1 { margin: 0; font-size: 18px; }
@@ -37,10 +40,10 @@
     .field { display: grid; align-content: start; gap: 6px; color: #4b5259; font-size: 12px; font-weight: 650; }
     .field.full { grid-column: 1 / -1; }
     input, select, textarea { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #e3e6e9; border-radius: 8px; background: #fff; color: #292d32; font-size: 13px; }
-    textarea { min-height: 110px; resize: vertical; line-height: 1.6; }
-    textarea.choices { min-height: 120px; }
+    textarea { min-height: 92px; resize: vertical; line-height: 1.6; }
     input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid #78b5ff; outline-offset: 2px; }
     .hint { color: #858c93; font-size: 11px; font-weight: 400; }
+    .preview { min-height: 0; padding: 0 10px; color: #626a72; font-size: 12px; font-weight: 400; line-height: 1.7; white-space: pre-wrap; }
     .errors { margin: 0 0 18px; padding: 10px 14px 10px 30px; border-radius: 8px; background: #fff2f2; color: #b43c3c; font-size: 12px; line-height: 1.7; }
     .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
     .button { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid #e3e6e9; border-radius: 9px; background: #fff; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
@@ -63,27 +66,22 @@
 <body>
   <div class="app">
     <aside class="sidebar" aria-label="주 메뉴">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>콴다조교</div>
-      {% for section in nav_sections %}
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>ProbOCR</div>
       <nav class="nav-section">
-        {% if section.label %}<div class="nav-label">{{ section.label }}</div>{% endif %}
-        {% for item in section["items"] %}
-        {% if item.endpoint %}
+        <div class="nav-label">문제 관리</div>
+        {% for item in nav_items %}
         <a class="nav-link{% if item.endpoint == 'new_question' %} active{% endif %}" href="{{ url_for(item.endpoint) }}"{% if item.endpoint == 'new_question' %} aria-current="page"{% endif %}>
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span><span class="nav-label-text">{{ item.label }}</span>
         </a>
-        {% else %}
-        <span class="nav-link"><span class="nav-icon" aria-hidden="true">{{ item.icon }}</span><span class="nav-label-text">{{ item.label }}</span></span>
-        {% endif %}
         {% endfor %}
       </nav>
-      {% endfor %}
-      <div class="sidebar-spacer"></div>
-      <nav class="nav-section">
-        {% for item in bottom_nav_items %}
-        <span class="nav-link"><span class="nav-icon" aria-hidden="true">{{ item.icon }}</span><span class="nav-label-text">{{ item.label }}</span></span>
-        {% endfor %}
-      </nav>
+      <div class="account-footer">
+        {{ current_user.display_name }} · {{ '관리자' if current_user.role == 'admin' else '사용자' }}
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">로그아웃</button>
+        </form>
+      </div>
     </aside>
     <main>
       <header class="page-header">
@@ -91,10 +89,9 @@
         <a class="back-link" href="{{ url_for('main') }}">문제 DB로 돌아가기</a>
       </header>
       <form class="form-card" method="post" action="{{ url_for('new_question') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         {% if errors %}
-        <ul class="errors" role="alert">
-          {% for error in errors %}<li>{{ error }}</li>{% endfor %}
-        </ul>
+        <ul class="errors" role="alert">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
         {% endif %}
         <div class="fields">
           <label class="field">과목
@@ -105,45 +102,48 @@
               {% endfor %}
             </select>
           </label>
-          <label class="field">문제 유형
-            <select name="question_type" required>
-              <option value="">유형 선택</option>
-              {% for question_type in question_types %}
-              <option value="{{ question_type }}"{% if form_data.get('question_type') == question_type %} selected{% endif %}>{{ question_type }}</option>
+          <label class="field">학년
+            <input name="grade" maxlength="50" value="{{ form_data.get('grade', '') }}" required>
+          </label>
+          <label class="field full">단원
+            <input name="unit" maxlength="200" value="{{ form_data.get('unit', '') }}" required>
+          </label>
+          <label class="field full">폴더 <span class="hint">선택 사항</span>
+            <select name="folder_uuid">
+              <option value="">폴더 미지정</option>
+              {% for folder in folder_options %}
+              <option value="{{ folder.uuid }}"{% if form_data.get('folder_uuid') == folder.uuid %} selected{% endif %}>{% for _ in range(folder.depth) %}　{% endfor %}{{ folder.name }}</option>
               {% endfor %}
             </select>
           </label>
-          <label class="field">배점
-            <input name="points" type="number" min="1" max="100" value="{{ form_data.get('points', '') }}" required>
-          </label>
-          <label class="field">난이도 <span class="hint">선택 사항</span>
-            <select name="difficulty">
-              <option value="">선택 안 함</option>
-              {% for difficulty in difficulties %}
-              <option value="{{ difficulty }}"{% if form_data.get('difficulty') == difficulty %} selected{% endif %}>{{ difficulty }}</option>
-              {% endfor %}
-            </select>
+          <label class="field full">지문 <span class="hint">선택 사항 · 수식은 $...$, \(...\), $$...$$ 또는 \[...\]로 입력</span>
+            <textarea name="passage" maxlength="10000" data-math-input="passage-preview">{{ form_data.get('passage', '') }}</textarea>
+            <output class="preview" id="passage-preview" aria-live="polite"></output>
           </label>
           <label class="field full">문제 내용
-            <textarea name="prompt" maxlength="10000" required>{{ form_data.get('prompt', '') }}</textarea>
+            <textarea name="prompt" maxlength="10000" data-math-input="prompt-preview" required>{{ form_data.get('prompt', '') }}</textarea>
+            <output class="preview" id="prompt-preview" aria-live="polite"></output>
           </label>
-          <label class="field full">선택지 <span class="hint">객관식은 한 줄에 하나씩 2~5개 입력해 주세요. 주관식은 비워 둡니다.</span>
-            <textarea class="choices" name="choices">{{ form_data.get('choices', '') }}</textarea>
+          <label class="field full">보기 <span class="hint">선택 사항 · 수식은 $...$, \(...\), $$...$$ 또는 \[...\]로 입력</span>
+            <textarea name="examples" maxlength="10000" data-math-input="examples-preview">{{ form_data.get('examples', '') }}</textarea>
+            <output class="preview" id="examples-preview" aria-live="polite"></output>
           </label>
-          <label class="field">단원 <span class="hint">선택 사항</span>
-            <input name="topic" maxlength="200" value="{{ form_data.get('topic', '') }}">
+          <label class="field full">선택지 <span class="hint">선택 사항 · 한 줄에 하나씩 입력</span>
+            <textarea name="choices" data-math-input="choices-preview">{{ form_data.get('choices', '') }}</textarea>
+            <output class="preview" id="choices-preview" aria-live="polite"></output>
           </label>
-          <label class="field">유형/키워드 <span class="hint">선택 사항</span>
-            <input name="keyword" maxlength="200" value="{{ form_data.get('keyword', '') }}">
+          <label class="field full">답
+            <textarea name="answer" maxlength="2000" data-math-input="answer-preview" required>{{ form_data.get('answer', '') }}</textarea>
+            <output class="preview" id="answer-preview" aria-live="polite"></output>
+          </label>
+          <label class="field full">출처
+            <input name="source" maxlength="300" value="{{ form_data.get('source', '') }}" required>
           </label>
           <label class="field">연도 <span class="hint">선택 사항</span>
             <input name="year" type="number" min="1" max="2200" value="{{ form_data.get('year', '') }}">
           </label>
           <label class="field">페이지 <span class="hint">선택 사항</span>
             <input name="page" type="number" min="1" max="10000" value="{{ form_data.get('page', '') }}">
-          </label>
-          <label class="field full">출처 <span class="hint">선택 사항</span>
-            <input name="source" maxlength="300" value="{{ form_data.get('source', '') }}">
           </label>
         </div>
         <div class="actions">
@@ -153,5 +153,30 @@
       </form>
     </main>
   </div>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
+  <script>
+    const mathOptions = {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "\\(", right: "\\)", display: false },
+        { left: "$", right: "$", display: false }
+      ],
+      throwOnError: false
+    };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll("[data-math-input]").forEach((input) => {
+        const preview = document.getElementById(input.dataset.mathInput);
+        const updatePreview = () => {
+          preview.textContent = input.value;
+          renderMathInElement(preview, mathOptions);
+        };
+        input.addEventListener("input", updatePreview);
+        updatePreview();
+      });
+    });
+  </script>
 </body>
 </html>
