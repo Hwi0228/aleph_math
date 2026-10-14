@@ -56,40 +56,108 @@ def _decode_image(image_bytes: bytes):
         raise ValueError("이미지를 읽을 수 없습니다. 손상되지 않은 이미지 파일인지 확인해 주세요.") from exc
 
 
-def _segment_text_lines(image):
-    """Return rough top-to-bottom text-line crops using connected components."""
+def _segment_text_lines(image, progress_callback=None):
+    """Segment text rows using horizontal projection, not disconnected word contours."""
     import cv2
     import numpy as np
+    from PIL import ImageEnhance, ImageOps
 
     rgb = np.asarray(image)
     gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
     _, threshold = cv2.threshold(
         gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
     )
+
+    # Find large photo/map-like regions on a dilated copy, then mask them before
+    # row projection. Otherwise, texture inside a photograph can glue rows together.
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 3))
     dilated = cv2.dilate(threshold, kernel, iterations=2)
     contours, _ = cv2.findContours(
         dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
-    boxes = sorted(
-        (cv2.boundingRect(contour) for contour in contours),
-        key=lambda box: (box[1], box[0]),
-    )
+    boxes = [cv2.boundingRect(contour) for contour in contours]
+    large_visuals = [
+        (x, y, width, height)
+        for x, y, width, height in boxes
+        if width >= image.width * 0.65
+        and height >= max(120, image.height * 0.18)
+    ]
+
+    text_mask = threshold.copy()
+    for x, y, width, height in large_visuals:
+        text_mask[y : y + height, x : x + width] = 0
+
+    if large_visuals and progress_callback:
+        progress_callback(
+            f"TrOCR: 사진·지도 등 큰 시각 영역 {len(large_visuals)}개를 "
+            "줄 검출에서 제외했습니다."
+        )
+
+    # Projection groups all characters and words sharing a baseline into one
+    # full-width text row. Contour boxes alone often split at large word spaces.
+    row_ink = np.count_nonzero(text_mask, axis=1)
+    min_row_ink = max(8, int(image.width * 0.006))
+    active_rows = row_ink >= min_row_ink
+
+    # Bridge tiny gaps caused by disconnected Hangul strokes (e.g. vowel dots).
+    y = 0
+    while y < len(active_rows):
+        if active_rows[y]:
+            y += 1
+            continue
+        gap_start = y
+        while y < len(active_rows) and not active_rows[y]:
+            y += 1
+        gap_size = y - gap_start
+        if gap_start > 0 and y < len(active_rows) and gap_size <= 5:
+            active_rows[gap_start:y] = True
+
+    bands = []
+    band_start = None
+    for y, is_active in enumerate(active_rows):
+        if is_active and band_start is None:
+            band_start = y
+        elif not is_active and band_start is not None:
+            if y - band_start >= 8:
+                bands.append((band_start, y))
+            band_start = None
+    if band_start is not None and len(active_rows) - band_start >= 8:
+        bands.append((band_start, len(active_rows)))
 
     crops = []
-    for x, y, width, height in boxes:
-        if height < 10 or width < 20:
+    for line_number, (top, bottom) in enumerate(bands, start=1):
+        column_ink = np.count_nonzero(text_mask[top:bottom], axis=0)
+        min_column_ink = max(2, int((bottom - top) * 0.02))
+        columns = np.flatnonzero(column_ink >= min_column_ink)
+        if not len(columns):
             continue
-        padding = 4
-        left = max(0, x - padding)
-        top = max(0, y - padding)
-        right = min(image.width, x + width + padding)
-        bottom = min(image.height, y + height + padding)
-        crops.append(image.crop((left, top, right, bottom)))
-        if len(crops) >= 160:
-            break
 
-    return crops or [image]
+        left = max(0, int(columns[0]) - 12)
+        right = min(image.width, int(columns[-1]) + 13)
+        padded_top = max(0, top - 7)
+        padded_bottom = min(image.height, bottom + 7)
+
+        crop = image.crop((left, padded_top, right, padded_bottom))
+        grayscale = ImageOps.autocontrast(crop.convert("L"))
+        crop = ImageEnhance.Sharpness(grayscale).enhance(1.25).convert("RGB")
+        crops.append(crop)
+
+        if progress_callback:
+            progress_callback(
+                f"TrOCR: 줄 후보 {line_number} 크롭 "
+                f"x={left}:{right}, y={padded_top}:{padded_bottom} "
+                f"({right - left}×{padded_bottom - padded_top}px)"
+            )
+
+    if not crops:
+        if progress_callback:
+            progress_callback(
+                "TrOCR: 수평 투영으로 텍스트 줄을 찾지 못했습니다. "
+                "전체 이미지를 대체 입력으로 사용합니다."
+            )
+        return [image]
+
+    return crops
 
 def extract_text(image_bytes: bytes, engine: str, progress_callback=None) -> str:
     """Recognize Korean/English text using the user-selected OCR engine."""
@@ -111,9 +179,7 @@ def extract_text(image_bytes: bytes, engine: str, progress_callback=None) -> str
 
         _, processor, model, device = loaded
         report("TrOCR: 텍스트 줄을 분할합니다.")
-        report("TrOCR: 텍스트 줄을 분할합니다.")
-        crops = _segment_text_lines(image)
-        report(f"TrOCR: 인식할 텍스트 영역 {len(crops)}개를 찾았습니다.")
+        crops = _segment_text_lines(image, progress_callback=report)
         report(f"TrOCR: 인식할 텍스트 줄 후보 {len(crops)}개를 찾았습니다.")
         recognized_lines = []
         recognized_count = 0
