@@ -151,47 +151,30 @@ class OCRRouteTests(unittest.TestCase):
 
         self.assertEqual(result, "공백 을 포함한 OCR 결과")
 
-    def test_korean_text_correction_preserves_math_and_choice_labels(self):
+    def test_qwen_correction_uses_full_context(self):
         engine_stub = (object(), object(), "cpu")
         logs = []
-        inputs = []
-
-        def fake_correct_line(line, _tokenizer, _model, _device):
-            inputs.append(line)
-            corrections = {
-                "다음사진과지도롤보고이지역지역성을바르게추란것은?":
-                    "다음 사진과 지도를 보고 이 지역의 지역성을 바르게 추론한 것은?",
-                "계절풍의영향으로벼농사가발달하였다.":
-                    "계절풍의 영향으로 벼농사가 발달하였다.",
-            }
-            return corrections[line]
-
         text = (
             "다음사진과지도롤보고이지역지역성을바르게추란것은?\n"
             "수식이 있는 줄 x^2 = 3이다\n"
             "①계절풍의영향으로벼농사가발달하였다."
         )
+        corrected_text = (
+            "다음 사진과 지도를 보고 이 지역의 지역성을 바르게 추론한 것은?\n"
+            "수식이 있는 줄 x^2 = 3이다\n"
+            "① 계절풍의 영향으로 벼농사가 발달하였다."
+        )
+
         with (
             patch("ocr_service._load_correction_engine", return_value=engine_stub),
-            patch("ocr_service._generate_corrected_line", side_effect=fake_correct_line),
+            patch("ocr_service._generate_corrected_text", return_value=corrected_text) as mock_generate,
         ):
             corrected = ocr_service._correct_korean_text(text, logs.append)
 
-        self.assertEqual(
-            corrected,
-            "다음 사진과 지도를 보고 이 지역의 지역성을 바르게 추론한 것은?\n"
-            "수식이 있는 줄 x^2 = 3이다\n"
-            "① 계절풍의 영향으로 벼농사가 발달하였다.",
-        )
-        self.assertEqual(
-            inputs,
-            [
-                "다음사진과지도롤보고이지역지역성을바르게추란것은?",
-                "계절풍의영향으로벼농사가발달하였다.",
-            ],
-        )
-        self.assertTrue(any("맞춤법·문장 보정 완료" in message for message in logs))
-        self.assertTrue(any("① 계절풍" in message for message in logs))
+        self.assertEqual(corrected, corrected_text)
+        mock_generate.assert_called_once_with(text, *engine_stub)
+        self.assertTrue(any("OCR 결과 전체를 문맥으로 사용" in message for message in logs))
+        self.assertTrue(any("Qwen3-0.6B 문맥 교정 완료" in message for message in logs))
 
     def test_binarize_for_trocr_outputs_black_and_white_rgb(self):
         from PIL import Image, ImageDraw
