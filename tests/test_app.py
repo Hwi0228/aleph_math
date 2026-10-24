@@ -481,11 +481,19 @@ class QuestionRegistrationTests(unittest.TestCase):
                     "SELECT uuid, user_uuid, name, parent_uuid FROM folders ORDER BY name"
                 ).fetchall()
                 question = connection.execute(
-                    "SELECT user_uuid, folder_uuid, unit, prompt, choices, source FROM questions"
+                    """
+                    SELECT user_uuid, folder_uuid, unit, prompt, choices, source,
+                           explanation
+                    FROM questions
+                    """
                 ).fetchone()
                 columns = {
                     row[1]
                     for row in connection.execute("PRAGMA table_info(folders)")
+                }
+                question_columns = {
+                    row[1]
+                    for row in connection.execute("PRAGMA table_info(questions)")
                 }
             finally:
                 connection.close()
@@ -502,9 +510,11 @@ class QuestionRegistrationTests(unittest.TestCase):
                 "이전 문제",
                 '["가","나"]',
                 "기존 출처",
+                "",
             ))
             self.assertIn("uuid", columns)
             self.assertNotIn("id", columns)
+            self.assertIn("explanation", question_columns)
         finally:
             app.config["DATABASE"] = original_database
 

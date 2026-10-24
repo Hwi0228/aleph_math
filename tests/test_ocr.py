@@ -61,7 +61,7 @@ class OCRRouteTests(unittest.TestCase):
         self.assertIn("EasyOCR".encode(), response.data)
 
     def test_ocr_post_passes_selected_engine_and_image_to_backend(self):
-        with patch("app.extract_text", return_value="인식된 문제 내용") as mocked_ocr:
+        with patch("ocr_routes.extract_text", return_value="인식된 문제 내용") as mocked_ocr:
             response = self.client.post(
                 "/ocr",
                 data={
@@ -83,7 +83,7 @@ class OCRRouteTests(unittest.TestCase):
             progress_callback("TrOCR: 텍스트 인식 진행 중 (1/1개 영역)")
             return "첫 번째 항목 1 + 2"
 
-        with patch("app.extract_text", side_effect=fake_extract):
+        with patch("ocr_routes.extract_text", side_effect=fake_extract):
             response = self.client.post(
                 "/ocr/stream",
                 data={

@@ -534,6 +534,7 @@
                 {% endfor %}
               </div>
               {% if question.answer %}<div class="card-field card-answer"><span class="card-field-label">답</span><div class="math-content">{{ question.answer }}</div></div>{% endif %}
+              {% if question.explanation %}<details class="card-field"><summary class="card-field-label">해설 보기</summary><div class="math-content">{{ question.explanation }}</div></details>{% endif %}
             </div>
             {% if question.year or question.page or question.source %}
             <div class="card-meta">
