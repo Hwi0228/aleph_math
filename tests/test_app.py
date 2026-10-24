@@ -371,6 +371,31 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(json.loads(row[7]), ["첫 번째 $x$", "두 번째", "세 번째"])
         self.assertEqual(row[8:], ("$x = 2$", "직접 등록한 출처", 2026, 12))
 
+    def test_question_details_button_expands_and_collapses_card_content(self):
+        self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(),
+        )
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            b'<button class="detail-button" type="button" aria-expanded="false">'
+            + "자세히".encode(),
+            response.data,
+        )
+        self.assertIn(
+            b'document.querySelectorAll(".question-card .card-top .detail-button")',
+            response.data,
+        )
+        self.assertIn(b'card.classList.toggle("expanded")', response.data)
+        self.assertIn(
+            'button.textContent = expanded ? "접기" : "자세히"'.encode(),
+            response.data,
+        )
+
     def test_subject_tab_filters_real_questions(self):
         self.csrf_post(self.client, "/questions/new", data=self.valid_question())
         science_form = self.valid_question(

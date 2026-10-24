@@ -2,7 +2,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from parse_hwp import parse_questions, parse_questions_from_xml
+from parse_hwp import (
+    _equation_to_latex,
+    normalize_katex_expression,
+    parse_questions,
+    parse_questions_from_xml,
+)
 
 
 class HwpParsingTests(unittest.TestCase):
@@ -136,6 +141,37 @@ class HwpParsingTests(unittest.TestCase):
         self.assertIn(r"\dfrac{ 5 } { 6 }", question["explanation"])
         self.assertEqual(question["choices"], [r"$\dfrac{ 7 } { 8 }$"])
         self.assertNotIn(r"\frac", question["question"])
+
+    def test_normalizes_hancom_braces_division_and_alignment_for_katex(self):
+        brace_formula = _equation_to_latex(
+            r"LEFT LBRACE {4} over {3} - LEFT ( - {1} over {3} RIGHT ) RIGHT RBRACE div LEFT ( - {1} over {9} RIGHT )"
+        )
+        self.assertEqual(
+            brace_formula,
+            r"\left \{ \dfrac{ 4 } { 3 } - \left ( - \dfrac{ 1 } { 3 } \right ) \right \} \div \left ( - \dfrac{ 1 } { 9 } \right )",
+        )
+
+        aligned_formula = _equation_to_latex(
+            r'EQALIGN { & rm "가입비 15000원" # & rm "- 가입 시 추가 요금 없이 무제한 편집 가능" }'
+        )
+        self.assertEqual(
+            aligned_formula,
+            r"\begin{aligned} & \text{가입비 15000원} \\ & \text{- 가입 시 추가 요금 없이 무제한 편집 가능} \end{aligned}",
+        )
+
+    def test_normalizes_legacy_formula_markup_for_existing_db_questions(self):
+        self.assertEqual(
+            normalize_katex_expression(
+                r"\eqalign{ & \mathrm{가입비 15000원} \\ & \mathrm{- 가입 시 추가 요금 없이 가능} }"
+            ),
+            r"\begin{aligned} & \text{가입비 15000원} \\ & \text{- 가입 시 추가 요금 없이 가능} \end{aligned}",
+        )
+        self.assertEqual(
+            normalize_katex_expression(
+                r"\left LBRACE \dfrac{4}{3} \right RBRACE div 2"
+            ),
+            r"\left \{ \dfrac{4}{3} \right \} \div 2",
+        )
 
 
 if __name__ == "__main__":

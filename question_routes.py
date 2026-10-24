@@ -6,7 +6,7 @@ from flask import abort, g, redirect, render_template, request, url_for
 from auth import admin_required, login_required
 from constants import NAV_ITEMS, SUBJECTS
 from database import get_db
-from parse_hwp import strip_choice_label
+from parse_hwp import normalize_katex_markup, strip_choice_label
 
 
 def get_selected_owner():
@@ -140,11 +140,11 @@ def get_question_page_data():
     for row in rows:
         question = dict(row)
         question["choices"] = [
-            strip_choice_label(choice)
+            normalize_katex_markup(strip_choice_label(choice))
             for choice in json.loads(question["choices"])
         ]
         for field in ("passage", "prompt", "examples", "answer", "explanation"):
-            question[field] = question[field].replace(r"\frac", r"\dfrac")
+            question[field] = normalize_katex_markup(question[field])
         questions.append(question)
 
     folder_tree, folder_options = get_folder_data(

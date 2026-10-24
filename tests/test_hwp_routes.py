@@ -116,6 +116,44 @@ class HwpParserRouteTests(unittest.TestCase):
         self.assertIn(r"\dfrac{1}{2}".encode(), question_response.data)
         self.assertIn(r"\dfrac{1}{3}".encode(), question_response.data)
 
+    def test_existing_hwp_equations_are_normalized_for_katex_display(self):
+        with self.client.session_transaction() as user_session:
+            user_uuid = user_session["user_uuid"]
+        connection = sqlite3.connect(app.config["DATABASE"])
+        try:
+            connection.execute(
+                """
+                INSERT INTO questions (
+                    user_uuid, subject, grade, unit, prompt, choices, answer,
+                    explanation, source
+                )
+                VALUES (?, '수학', '고1', '대수', ?, ?, '①', ?, '기출')
+                """,
+                (
+                    user_uuid,
+                    r"$\eqalign{ & \mathrm{가입비 15000원} \\ & \mathrm{- 추가 요금 없이 가능} }$",
+                    json.dumps(
+                        [r"$\left LBRACE \dfrac{4}{3} \right RBRACE div 2$"],
+                        ensure_ascii=False,
+                    ),
+                    r"$\eqalign{ & x = \dfrac{1}{2} \\ & = \dfrac{2}{4} }$",
+                ),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(r"\begin{aligned}".encode(), response.data)
+        self.assertIn(r"\text{가입비 15000원}".encode(), response.data)
+        self.assertIn(
+            r"$\left \{ \dfrac{4}{3} \right \} \div 2$".encode(),
+            response.data,
+        )
+        self.assertNotIn(r"\eqalign".encode(), response.data)
+
     def test_uploading_section_xml_renders_parsed_questions(self):
         response = self.client.post(
             "/hwp",
