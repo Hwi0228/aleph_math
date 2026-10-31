@@ -87,7 +87,7 @@ def render_account_form(mode, form_data=None, errors=None, status=200):
 
 def signup():
     if g.user is not None:
-        return redirect(url_for("main"))
+        return redirect(url_for("dashboard"))
     if request.method == "GET":
         return render_account_form("signup")
 
@@ -160,11 +160,11 @@ def signup():
 
     session.clear()
     session["user_uuid"] = user_uuid
-    return redirect(url_for("main"))
+    return redirect(url_for("dashboard"))
 
 def login():
     if g.user is not None:
-        return redirect(url_for("main"))
+        return redirect(url_for("dashboard"))
     if request.method == "GET":
         return render_account_form("login")
 
@@ -197,7 +197,7 @@ def login():
         and "\\" not in destination
     ):
         return redirect(destination)
-    return redirect(url_for("main"))
+    return redirect(url_for("dashboard"))
 
 def logout():
     session.clear()

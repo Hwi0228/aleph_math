@@ -112,7 +112,7 @@ class HwpParserRouteTests(unittest.TestCase):
                 "",
             ),
         )
-        question_response = self.client.get("/")
+        question_response = self.client.get("/questions")
         self.assertIn(r"\dfrac{1}{2}".encode(), question_response.data)
         self.assertIn(r"\dfrac{1}{3}".encode(), question_response.data)
 
@@ -143,7 +143,7 @@ class HwpParserRouteTests(unittest.TestCase):
         finally:
             connection.close()
 
-        response = self.client.get("/")
+        response = self.client.get("/questions")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(r"\begin{aligned}".encode(), response.data)

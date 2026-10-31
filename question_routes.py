@@ -383,7 +383,7 @@ def move_question(question_id):
 
 def register_question_routes(app):
     app.add_url_rule(
-        "/", endpoint="main", view_func=login_required(main), methods=["GET"]
+        "/questions", endpoint="main", view_func=login_required(main), methods=["GET"]
     )
     app.add_url_rule(
         "/admin/users",

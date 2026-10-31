@@ -125,6 +125,20 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login", response.headers["Location"])
 
+    def test_dashboard_shows_recent_questions_and_links_to_question_database(self):
+        self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(prompt="대시보드 최근 문항"),
+        )
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("등록한 문제".encode(), response.data)
+        self.assertIn("대시보드 최근 문항".encode(), response.data)
+        self.assertIn(b'href="/questions"', response.data)
+
     def test_signup_validates_password_and_csrf(self):
         client = app.test_client()
         response = self.register(
@@ -188,17 +202,17 @@ class QuestionRegistrationTests(unittest.TestCase):
 
         admin_response = self.client.get("/admin/users")
         self.assertEqual(admin_response.status_code, 200)
-        self.assertIn(f"/?user_uuid={user_uuid}".encode(), admin_response.data)
-        user_question_response = self.client.get(f"/?user_uuid={user_uuid}")
+        self.assertIn(f"/questions?user_uuid={user_uuid}".encode(), admin_response.data)
+        user_question_response = self.client.get(f"/questions?user_uuid={user_uuid}")
         self.assertIn("사용자 소유 문제".encode(), user_question_response.data)
 
-        forbidden_response = user_client.get(f"/?user_uuid={self.admin_uuid}")
+        forbidden_response = user_client.get(f"/questions?user_uuid={self.admin_uuid}")
         self.assertEqual(forbidden_response.status_code, 403)
         self.assertEqual(user_client.get("/admin/users").status_code, 403)
-        self.assertNotIn("관리자 소유 문제".encode(), user_client.get("/").data)
+        self.assertNotIn("관리자 소유 문제".encode(), user_client.get("/questions").data)
 
     def test_empty_database_shows_no_fake_questions_or_count(self):
-        response = self.client.get("/")
+        response = self.client.get("/questions")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("표시할 문제가 없습니다.".encode(), response.data)
@@ -207,16 +221,16 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertNotIn("광희중학교".encode(), response.data)
 
     def test_only_working_database_items_appear_in_sidebar(self):
-        response = self.client.get("/")
+        response = self.client.get("/questions")
         sidebar = response.data.split(b'<aside class="sidebar"', 1)[1].split(b"</aside>", 1)[0]
 
-        self.assertIn("문제 DB 등록".encode(), sidebar)
+        self.assertIn("문제 등록".encode(), sidebar)
         self.assertIn("문제 DB".encode(), sidebar)
         for unused_item in ("홈", "문제 상점", "문제지", "AI 변형문제", "출처 분석", "학생 관리", "설정"):
             self.assertNotIn(unused_item.encode(), sidebar)
 
     def test_registration_form_is_reachable_from_the_sidebar(self):
-        database_response = self.client.get("/")
+        database_response = self.client.get("/questions")
         form_response = self.client.get("/questions/new")
 
         self.assertIn(b'href="/questions/new"', database_response.data)
@@ -237,13 +251,13 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertIn(b"renderMathInElement", form_response.data)
 
     def test_only_user_created_uuid_folders_and_nested_folders_appear(self):
-        empty_response = self.client.get("/")
+        empty_response = self.client.get("/questions")
         self.assertIn("아직 만든 폴더가 없습니다.".encode(), empty_response.data)
         self.assertNotIn("광희중학교".encode(), empty_response.data)
 
         parent_uuid = self.create_folder(self.client, "내신 대비")
         child_uuid = self.create_folder(self.client, "미분", parent_uuid)
-        response = self.client.get("/")
+        response = self.client.get("/questions")
 
         self.assertIn("내신 대비".encode(), response.data)
         self.assertIn("미분".encode(), response.data)
@@ -272,7 +286,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("선택한 폴더가 없습니다.".encode(), response.data)
-        self.assertEqual(self.client.get(f"/?folder={other_uuid}").status_code, 404)
+        self.assertEqual(self.client.get(f"/questions?folder={other_uuid}").status_code, 404)
 
     def test_question_can_be_registered_in_uuid_folder_and_filter_includes_children(self):
         parent_uuid = self.create_folder(self.client, "내신 대비")
@@ -297,10 +311,10 @@ class QuestionRegistrationTests(unittest.TestCase):
         finally:
             connection.close()
 
-        parent_response = self.client.get(f"/?folder={parent_uuid}")
+        parent_response = self.client.get(f"/questions?folder={parent_uuid}")
         self.assertIn("문제 내용".encode(), parent_response.data)
         self.assertIn("내신 대비 폴더의 문제".encode(), parent_response.data)
-        child_response = self.client.get(f"/?folder={child_uuid}")
+        child_response = self.client.get(f"/questions?folder={child_uuid}")
         self.assertIn("문제 내용".encode(), child_response.data)
 
     def test_existing_question_can_be_moved_to_uuid_folder(self):
@@ -378,7 +392,7 @@ class QuestionRegistrationTests(unittest.TestCase):
             data=self.valid_question(),
         )
 
-        response = self.client.get("/")
+        response = self.client.get("/questions")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(
@@ -406,8 +420,8 @@ class QuestionRegistrationTests(unittest.TestCase):
         )
         self.csrf_post(self.client, "/questions/new", data=science_form)
 
-        math_response = self.client.get("/?subject=수학")
-        science_response = self.client.get("/?subject=과학")
+        math_response = self.client.get("/questions?subject=수학")
+        science_response = self.client.get("/questions?subject=과학")
 
         self.assertIn("문제 내용".encode(), math_response.data)
         self.assertNotIn("과학 문제".encode(), math_response.data)
@@ -434,7 +448,7 @@ class QuestionRegistrationTests(unittest.TestCase):
             connection.close()
 
     def test_math_delimiters_are_configured_on_question_list(self):
-        response = self.client.get("/")
+        response = self.client.get("/questions")
         html = response.get_data(as_text=True)
 
         self.assertIn("katex.min.css", html)
@@ -449,7 +463,7 @@ class QuestionRegistrationTests(unittest.TestCase):
             data=self.valid_question(prompt="<script>alert(1)</script>"),
         )
 
-        response = self.client.get("/")
+        response = self.client.get("/questions")
         self.assertIn(b"&lt;script&gt;alert(1)&lt;/script&gt;", response.data)
         self.assertNotIn(b"<script>alert(1)</script>", response.data)
 
