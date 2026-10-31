@@ -1,0 +1,9 @@
+.app-question-bank .filter-panel, .app-question-bank .settings { background: #fff; border-color: var(--aleph-border); }
+.app-question-bank .results-header { min-height: 48px; background: #fff; border-color: var(--aleph-border); }
+.app-question-bank .question-card { border-color: var(--aleph-border); border-radius: 11px; background: #fff; box-shadow: var(--aleph-shadow); }
+.app-question-bank .question-card .tag { background: #F2F5F8; color: #637488; }
+.app-question-bank .question-card .tag.subject { background: var(--aleph-primary-soft); color: var(--aleph-primary); }
+.app-question-bank .question-wiki-actions .detail-button { border-color: var(--aleph-border); color: var(--aleph-primary); }
+.app-question-bank .question-content { color: var(--aleph-text); }
+.app-question-bank .result-area { background: var(--aleph-bg); }
+.app-question-bank .filter-panel .subject-tab.selected { border-color: #D7E6F3; background: var(--aleph-primary-soft); color: var(--aleph-primary); }

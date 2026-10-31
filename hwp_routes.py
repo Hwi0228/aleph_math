@@ -14,6 +14,18 @@ from parse_rhwp import MAX_DOCUMENT_BYTES, parse_questions_from_rhwp_bytes
 MAX_SECTION_XML_SIZE = 16 * 1024 * 1024
 MAX_IMPORTED_QUESTIONS = 500
 
+LICENSE_CHOICES = {
+    "ORIGINAL": "직접 제작 (권리 보유)",
+    "CC-BY-4.0": "CC BY 4.0",
+    "CC-BY-SA-4.0": "CC BY-SA 4.0",
+    "CC0-1.0": "CC0 1.0 / 퍼블릭 도메인",
+    "PERMISSION": "권리자로부터 공개 허가 받음",
+}
+SOURCE_TYPES = (
+    "직접 제작", "교재 및 참고서", "학교 시험", "수능 및 모의평가",
+    "공개 데이터셋", "기타",
+)
+
 
 def _validated_import(form):
     errors = []
@@ -30,11 +42,16 @@ def _validated_import(form):
     grade = form.get("grade", "").strip()
     unit = form.get("unit", "").strip()
     source = form.get("source", "").strip()
-    folder_uuid = form.get("folder_uuid", "").strip() or None
+    license_value = form.get("license", "").strip()
+    source_type = form.get("source_type", "기타").strip() or "기타"
     year_value = form.get("year", "").strip()
 
     if subject not in SUBJECTS:
         errors.append("과목을 선택해 주세요.")
+    if license_value not in LICENSE_CHOICES:
+        errors.append("문항 공개에 사용할 라이선스를 선택해 주세요.")
+    if source_type not in SOURCE_TYPES:
+        errors.append("출처 유형이 올바르지 않습니다.")
     for value, label in ((grade, "학년"), (unit, "단원"), (source, "출처")):
         if not value:
             errors.append(f"{label}을(를) 입력해 주세요.")
@@ -54,12 +71,6 @@ def _validated_import(form):
                 raise ValueError
         except ValueError:
             errors.append("연도는 1에서 2200 사이의 정수로 입력해 주세요.")
-
-    if folder_uuid and get_db().execute(
-        "SELECT 1 FROM folders WHERE uuid = ? AND user_uuid = ?",
-        (folder_uuid, g.user["uuid"]),
-    ).fetchone() is None:
-        errors.append("선택한 폴더가 없습니다.")
 
     selected_values = form.getlist("selected_questions")
     selected_indices = []
@@ -121,8 +132,10 @@ def _validated_import(form):
         "grade": grade,
         "unit": unit,
         "source": source,
-        "folder_uuid": folder_uuid,
+        "folder_uuid": None,
         "year": year,
+        "license": license_value,
+        "source_type": source_type,
     }
     return normalized_questions, (metadata, selected_indices), errors, None
 
@@ -137,6 +150,8 @@ def _render_page(questions=None, result_json=None, error=None, form_data=None):
         nav_items=NAV_ITEMS,
         subjects=SUBJECTS,
         folders=folders,
+        license_choices=LICENSE_CHOICES,
+        source_types=SOURCE_TYPES,
         questions=questions,
         result_json=result_json,
         error=error,
@@ -169,31 +184,67 @@ def hwp_parser_page():
                 metadata, selected_indices = selection
                 connection = get_db()
                 with connection:
-                    connection.executemany(
-                        """
-                        INSERT INTO questions (
-                            user_uuid, folder_uuid, subject, grade, unit, prompt,
-                            choices, answer, explanation, source, year
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        [
-                            (
-                                g.user["uuid"],
-                                metadata["folder_uuid"],
-                                metadata["subject"],
-                                metadata["grade"],
-                                metadata["unit"],
-                                questions[index]["question"],
-                                json.dumps(questions[index]["choices"], ensure_ascii=False),
-                                questions[index]["answer"],
-                                questions[index]["explanation"],
-                                metadata["source"],
-                                metadata["year"],
+                    for index in selected_indices:
+                        imported = questions[index]
+                        cursor = connection.execute(
+                            """
+                            INSERT INTO questions (
+                                user_uuid, folder_uuid, subject, grade, unit, title,
+                                prompt, choices, answer, explanation, source, year,
+                                source_type, license
                             )
-                            for index in selected_indices
-                        ],
-                    )
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                g.user["uuid"], None, metadata["subject"],
+                                metadata["grade"], metadata["unit"], "",
+                                imported["question"],
+                                json.dumps(imported["choices"], ensure_ascii=False),
+                                imported["answer"], imported["explanation"],
+                                metadata["source"], metadata["year"],
+                                metadata["source_type"], metadata["license"],
+                            ),
+                        )
+                        question_id = cursor.lastrowid
+                        snapshot = {
+                            "title": "",
+                            "subject": metadata["subject"],
+                            "grade": metadata["grade"],
+                            "course": "",
+                            "curriculum": "2015 개정 교육과정",
+                            "unit": metadata["unit"],
+                            "achievement_standard": "",
+                            "difficulty": "중",
+                            "question_type": "객관식" if imported["choices"] else "단답형",
+                            "points": 4,
+                            "passage": "",
+                            "prompt": imported["question"],
+                            "examples": "",
+                            "choices": imported["choices"],
+                            "answer": imported["answer"],
+                            "explanation": imported["explanation"],
+                            "source_type": metadata["source_type"],
+                            "source": metadata["source"],
+                            "year": metadata["year"],
+                            "exam": "",
+                            "original_question_number": str(imported["number"]),
+                            "page": None,
+                            "source_url": "",
+                            "license": metadata["license"],
+                        }
+                        connection.execute(
+                            """
+                            INSERT INTO question_revisions (
+                                question_id, revision_number, editor_uuid,
+                                summary, snapshot_json
+                            )
+                            VALUES (?, 1, ?, ?, ?)
+                            """,
+                            (
+                                question_id, g.user["uuid"], "HWP 문서에서 가져옴",
+                                json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")),
+                            ),
+                        )
                 return redirect(
                     url_for(
                         "main",

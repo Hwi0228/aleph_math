@@ -65,9 +65,14 @@ class QuestionRegistrationTests(unittest.TestCase):
 
     def valid_question(self, **overrides):
         form = {
+            "title": "테스트 문항",
             "subject": "수학",
             "grade": "고2",
+            "course": "수학Ⅱ",
             "unit": "미분",
+            "difficulty": "중",
+            "question_type": "단답형",
+            "license": "ORIGINAL",
             "passage": "지문 $x^2$",
             "prompt": "문제 내용 \\(x^2\\)",
             "examples": "보기 $$x + 1$$",
@@ -109,6 +114,129 @@ class QuestionRegistrationTests(unittest.TestCase):
             session_uuid = user_session["user_uuid"]
         return session_uuid
 
+    def test_temporary_draft_is_private_and_does_not_create_a_public_question_or_revision(self):
+        response = self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(form_action="draft", prompt="<p>작성 중인 문제</p>"),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.query_one("SELECT COUNT(*) FROM questions"), 0)
+        self.assertEqual(self.query_one("SELECT COUNT(*) FROM question_revisions"), 0)
+        self.assertEqual(self.query_one("SELECT COUNT(*) FROM question_drafts"), 1)
+
+        reopen = self.client.get("/questions/new")
+        self.assertEqual(reopen.status_code, 200)
+        self.assertIn("작성 중인 문제".encode(), reopen.data)
+        self.assertIn("임시 저장".encode(), reopen.data)
+
+        other = app.test_client()
+        self.register(other, "draft-reader@example.com", "다른 사용자")
+        self.assertNotIn("작성 중인 문제".encode(), other.get("/questions").data)
+
+    def test_edit_temporary_draft_does_not_overwrite_public_question_or_add_revision(self):
+        self.csrf_post(self.client, "/questions/new", data=self.valid_question())
+        response = self.client.get("/questions/1/edit")
+        self.assertEqual(response.status_code, 200)
+
+        response = self.csrf_post(
+            self.client,
+            "/questions/1/edit",
+            data=self.valid_question(
+                form_action="draft",
+                base_revision="1",
+                prompt="<p>비공개 수정 초안</p>",
+            ),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.query_one("SELECT COUNT(*) FROM question_revisions WHERE question_id = 1"), 1)
+        self.assertEqual(
+            self.query_one("SELECT prompt FROM questions WHERE id = 1"),
+            "문제 내용 \\(x^2\\)",
+        )
+        self.assertEqual(self.query_one("SELECT COUNT(*) FROM question_drafts"), 1)
+
+    def test_question_number_uses_six_character_base36(self):
+        from question_routes import format_question_number
+
+        self.assertEqual(format_question_number(1), "000001")
+        self.assertEqual(format_question_number(10), "00000A")
+        self.assertEqual(format_question_number(35), "00000Z")
+        self.assertEqual(format_question_number(36), "000010")
+        self.assertEqual(format_question_number(71), "00001Z")
+
+    def test_curriculum_standard_endpoint_returns_matched_standards(self):
+        response = self.client.get(
+            "/curriculum/standards?curriculum=2015%20개정%20교육과정&course=수학Ⅱ&unit=함수의%20극한"
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertIn("[12수학Ⅱ01-01]", payload["standards"][0])
+
+    def test_personal_question_notes_are_private_to_each_member(self):
+        self.csrf_post(self.client, "/questions/new", data=self.valid_question())
+        note_response = self.csrf_post(
+            self.client,
+            "/questions/1/notes",
+            data={"personal_note": "나만 보는 복습 메모", "subject": "수학"},
+            follow_redirects=True,
+        )
+        self.assertEqual(note_response.status_code, 200)
+        self.assertIn("문제 더보기".encode(), note_response.data)
+        self.assertIn("나만 보는 복습 메모".encode(), note_response.data)
+        self.assertEqual(
+            self.query_one("SELECT COUNT(*) FROM question_revisions WHERE question_id = 1"),
+            1,
+        )
+
+        other = app.test_client()
+        self.register(other, "private-note@example.com", "메모 확인자")
+        other_response = other.get("/questions")
+        self.assertEqual(other_response.status_code, 200)
+        self.assertNotIn("나만 보는 복습 메모".encode(), other_response.data)
+
+    def test_published_question_records_new_metadata_and_revision_snapshot(self):
+        self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(
+                title="미분계수 문항",
+                course="수학Ⅱ",
+                curriculum="2015 개정 교육과정",
+                difficulty="상",
+                question_type="서술형",
+                points="6",
+                achievement_standard="[12수학Ⅱ02-01] 미분계수의 뜻을 알고, 그 값을 구할 수 있다.",
+                source_type="수능 및 모의평가",
+                exam="2026학년도 6월 모의평가",
+                original_question_number="12",
+                source_url="https://example.com/question",
+                license="CC-BY-4.0",
+            ),
+        )
+        connection = sqlite3.connect(self.database)
+        try:
+            row = connection.execute(
+                """
+                SELECT title, course, curriculum, difficulty, question_type,
+                       points, achievement_standard, source_type, exam,
+                       original_question_number, source_url, license
+                FROM questions WHERE id = 1
+                """
+            ).fetchone()
+            snapshot = json.loads(connection.execute(
+                "SELECT snapshot_json FROM question_revisions WHERE question_id = 1"
+            ).fetchone()[0])
+        finally:
+            connection.close()
+        self.assertEqual(row[0], "미분계수 문항")
+        self.assertEqual(row[3], "상")
+        self.assertEqual(row[4], "서술형")
+        self.assertEqual(row[5], 6)
+        self.assertEqual(row[11], "CC-BY-4.0")
+        self.assertEqual(snapshot["title"], "미분계수 문항")
+        self.assertEqual(snapshot["license"], "CC-BY-4.0")
+
     def test_first_account_is_admin_and_login_required(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
@@ -135,7 +263,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("등록한 문제".encode(), response.data)
+        self.assertIn("최근 등록 문제".encode(), response.data)
         self.assertIn("대시보드 최근 문항".encode(), response.data)
         self.assertIn(b'href="/questions"', response.data)
 
@@ -250,16 +378,24 @@ class QuestionRegistrationTests(unittest.TestCase):
             "subject",
             "grade",
             "unit",
-            "folder_uuid",
+            "course",
+            "curriculum",
+            "difficulty",
+            "question_type",
+            "achievement_standard",
+            "title",
             "passage",
             "prompt",
             "examples",
             "choices",
             "answer",
             "source",
+            "license",
         ):
             self.assertIn(f'name="{field}"'.encode(), form_response.data)
-        self.assertIn(b"renderMathInElement", form_response.data)
+        self.assertIn(b'data-editor="answer"', form_response.data)
+        self.assertIn("임시 저장".encode(), form_response.data)
+        self.assertIn(b"tiptap", form_response.data)
 
     def test_only_user_created_uuid_folders_and_nested_folders_appear(self):
         empty_response = self.client.get("/questions")
@@ -289,28 +425,32 @@ class QuestionRegistrationTests(unittest.TestCase):
         other_client = app.test_client()
         self.register(other_client, "other@example.com", "다른 사용자")
         other_uuid = self.create_folder(other_client, "비공개 폴더")
+        self.csrf_post(self.client, "/questions/new", data=self.valid_question())
 
         response = self.csrf_post(
             self.client,
-            "/questions/new",
-            data=self.valid_question(folder_uuid=other_uuid),
+            "/questions/1/folder",
+            data={"folder_uuid": other_uuid, "subject": "수학"},
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("선택한 폴더가 없습니다.".encode(), response.data)
         self.assertEqual(self.client.get(f"/questions?folder={other_uuid}").status_code, 404)
 
-    def test_question_can_be_registered_in_uuid_folder_and_filter_includes_children(self):
+    def test_question_can_be_moved_into_uuid_folder_after_publication(self):
         parent_uuid = self.create_folder(self.client, "내신 대비")
         child_uuid = self.create_folder(self.client, "미분", parent_uuid)
         response = self.csrf_post(
-            self.client,
-            "/questions/new",
-            data=self.valid_question(folder_uuid=child_uuid),
-            follow_redirects=True,
+            self.client, "/questions/new",
+            data=self.valid_question(), follow_redirects=True,
         )
-
         self.assertEqual(response.status_code, 200)
         self.assertIn("문제를 등록했습니다.".encode(), response.data)
+
+        response = self.csrf_post(
+            self.client, "/questions/1/folder",
+            data={"folder_uuid": child_uuid, "subject": "수학"},
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertIn("문제 내용".encode(), response.data)
         self.assertIn('class="folder-count">1</span>'.encode(), response.data)
         connection = sqlite3.connect(self.database)
@@ -448,7 +588,7 @@ class QuestionRegistrationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("학년을(를) 입력해 주세요.".encode(), response.data)
-        self.assertIn("답을(를) 입력해 주세요.".encode(), response.data)
+        self.assertIn("정답을 입력해 주세요.".encode(), response.data)
         connection = sqlite3.connect(self.database)
         try:
             self.assertEqual(

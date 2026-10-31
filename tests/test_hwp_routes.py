@@ -249,7 +249,8 @@ class HwpParserRouteTests(unittest.TestCase):
                 "unit": "다항식",
                 "source": "2026학년도 10월 학력평가",
                 "year": "2026",
-                "folder_uuid": "",
+                "license": "ORIGINAL",
+                "source_type": "수능 및 모의평가",
             },
             follow_redirects=True,
         )
@@ -264,7 +265,7 @@ class HwpParserRouteTests(unittest.TestCase):
             rows = connection.execute(
                 """
                 SELECT subject, grade, unit, prompt, choices, answer, explanation,
-                       source, year
+                       source, year, license
                 FROM questions
                 """
             ).fetchall()
@@ -283,9 +284,20 @@ class HwpParserRouteTests(unittest.TestCase):
                     "풀이 $x^2$",
                     "2026학년도 10월 학력평가",
                     2026,
+                    "ORIGINAL",
                 )
             ],
         )
+        connection = sqlite3.connect(app.config["DATABASE"])
+        try:
+            revision_count = connection.execute(
+                "SELECT COUNT(*) FROM question_revisions"
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        self.assertEqual(revision_count, 1)
+        history_response = self.client.get("/questions/1/history")
+        self.assertIn("HWP 문서에서 가져옴".encode(), history_response.data)
 
     def test_invalid_import_metadata_keeps_preview_without_saving(self):
         response = self.client.post(

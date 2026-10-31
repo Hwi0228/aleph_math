@@ -4,25 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ '회원가입' if mode == 'signup' else '로그인' }} | Aleph Math</title>
-  <style>
-    :root { font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #292d32; background: #f6f7f8; }
-    * { box-sizing: border-box; }
-    body { display: grid; min-height: 100vh; margin: 0; place-items: center; padding: 20px; }
-    .card { width: min(100%, 400px); padding: 26px; border: 1px solid #eceef0; border-radius: 14px; background: #fff; }
-    h1 { margin: 0 0 8px; font-size: 20px; }
-    .description { margin: 0 0 22px; color: #858c93; font-size: 13px; line-height: 1.6; }
-    .fields { display: grid; gap: 14px; }
-    label { display: grid; gap: 6px; color: #4b5259; font-size: 12px; font-weight: 650; }
-    input { width: 100%; height: 38px; padding: 0 10px; border: 1px solid #e3e6e9; border-radius: 8px; font: inherit; font-size: 13px; }
-    input:focus-visible, button:focus-visible { outline: 2px solid #78b5ff; outline-offset: 2px; }
-    button { height: 38px; margin-top: 4px; border: 0; border-radius: 8px; background: #3183f6; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-    .errors { margin: 0 0 15px; padding: 10px 12px 10px 30px; border-radius: 8px; background: #fff2f2; color: #b43c3c; font-size: 12px; line-height: 1.7; }
-    .switch { margin: 17px 0 0; color: #737a81; font-size: 12px; text-align: center; }
-    a { color: #3183f6; }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-account_form.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/auth.css') }}">
 </head>
-<body>
-  <main class="card">
+<body class="auth-page">
+  <main class="card auth-shell">
+    <div class="auth-brand"><span class="auth-brand-mark" aria-hidden="true">ℵ</span><span>ALEPH MATH</span></div>
     <h1>{{ '계정 만들기' if mode == 'signup' else '로그인' }}</h1>
     <p class="description">
       {% if mode == 'signup' %}{% if first_account %}첫 번째로 가입하면 관리자 계정이 됩니다. 기존 문제와 폴더는 첫 계정에 연결됩니다.{% else %}가입 후에는 본인의 문제와 폴더를 관리할 수 있습니다.{% endif %}{% else %}계정에 로그인해 문제 DB를 확인하세요.{% endif %}

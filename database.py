@@ -65,6 +65,18 @@ CREATE TABLE questions (
     source TEXT NOT NULL,
     year INTEGER,
     page INTEGER,
+    difficulty TEXT NOT NULL DEFAULT '중',
+    question_type TEXT NOT NULL DEFAULT '단답형',
+    points INTEGER NOT NULL DEFAULT 4,
+    course TEXT NOT NULL DEFAULT '',
+    curriculum TEXT NOT NULL DEFAULT '2015 개정 교육과정',
+    achievement_standard TEXT NOT NULL DEFAULT '',
+    source_type TEXT NOT NULL DEFAULT '기타',
+    exam TEXT NOT NULL DEFAULT '',
+    original_question_number TEXT NOT NULL DEFAULT '',
+    source_url TEXT NOT NULL DEFAULT '',
+    license TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 """
@@ -113,6 +125,72 @@ def _create_question_revision_table(connection):
         "ON question_revisions(question_id, revision_number DESC)"
     )
 
+QUESTION_DRAFTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS question_drafts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_uuid TEXT NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+    draft_key TEXT NOT NULL,
+    question_id INTEGER REFERENCES questions(id) ON DELETE CASCADE,
+    base_revision INTEGER,
+    payload_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_uuid, draft_key)
+)
+"""
+
+QUESTION_ADDITIONAL_COLUMNS = {
+    "difficulty": "TEXT NOT NULL DEFAULT '중'",
+    "question_type": "TEXT NOT NULL DEFAULT '단답형'",
+    "points": "INTEGER NOT NULL DEFAULT 4",
+    "course": "TEXT NOT NULL DEFAULT ''",
+    "curriculum": "TEXT NOT NULL DEFAULT '2015 개정 교육과정'",
+    "achievement_standard": "TEXT NOT NULL DEFAULT ''",
+    "source_type": "TEXT NOT NULL DEFAULT '기타'",
+    "exam": "TEXT NOT NULL DEFAULT ''",
+    "original_question_number": "TEXT NOT NULL DEFAULT ''",
+    "source_url": "TEXT NOT NULL DEFAULT ''",
+    "license": "TEXT NOT NULL DEFAULT ''",
+    "title": "TEXT NOT NULL DEFAULT ''",
+}
+
+
+def _ensure_question_additional_columns(connection):
+    columns = _table_columns(connection, "questions")
+    for name, definition in QUESTION_ADDITIONAL_COLUMNS.items():
+        if name not in columns:
+            connection.execute(
+                f"ALTER TABLE questions ADD COLUMN {name} {definition}"
+            )
+
+
+def _create_question_drafts_table(connection):
+    connection.execute(QUESTION_DRAFTS_SCHEMA)
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_question_drafts_owner "
+        "ON question_drafts(user_uuid, updated_at DESC)"
+    )
+
+QUESTION_NOTES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS question_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_uuid TEXT NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+    question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    note TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_uuid, question_id)
+)
+"""
+
+
+def _create_question_notes_table(connection):
+    connection.execute(QUESTION_NOTES_SCHEMA)
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_question_notes_user "
+        "ON question_notes(user_uuid, question_id)"
+    )
+
+
 
 def _migrate_question_fractions(connection):
     fraction_fields = (
@@ -153,9 +231,12 @@ def initialize_database(connection):
             connection.execute(
                 "ALTER TABLE questions ADD COLUMN explanation TEXT NOT NULL DEFAULT ''"
             )
+        _ensure_question_additional_columns(connection)
         _migrate_question_fractions(connection)
         _create_indexes(connection)
         _create_question_revision_table(connection)
+        _create_question_drafts_table(connection)
+        _create_question_notes_table(connection)
         connection.commit()
         connection.execute("PRAGMA foreign_keys = ON")
         return
@@ -249,9 +330,12 @@ def initialize_database(connection):
                 ),
             )
 
+        _ensure_question_additional_columns(connection)
         _migrate_question_fractions(connection)
         _create_indexes(connection)
         _create_question_revision_table(connection)
+        _create_question_drafts_table(connection)
+        _create_question_notes_table(connection)
         connection.commit()
     except Exception:
         connection.rollback()

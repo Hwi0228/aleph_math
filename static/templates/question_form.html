@@ -3,175 +3,472 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#f6f7f8">
-  <title>{{ '문제 편집' if mode == 'edit' else '문제 등록' }} | ALEPH MATH</title>
+  <meta name="theme-color" content="#F4F7FA">
+  <title>{{ '문항 수정' if mode == 'edit' else '문항 작성' }} | ALEPH MATH</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
-  <style>
-    :root {
-      font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #292d32;
-      background: #f6f7f8;
-      --line: #eceef0;
-      --blue: #3183f6;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-width: 320px; min-height: 100vh; }
-    button, input, select, textarea { font: inherit; }
-    a { color: inherit; }
-    .app { display: grid; grid-template-columns: 172px minmax(0, 1fr); min-height: 100vh; }
-    .sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 0 10px 12px; background: #fff; border-right: 1px solid var(--line); }
-    .brand { display: flex; height: 49px; align-items: center; gap: 6px; padding: 0 2px; font-size: 15px; font-weight: 800; white-space: nowrap; }
-    .brand-mark { display: grid; width: 16px; height: 16px; place-items: center; border: 4px solid #17191c; border-right-color: #f3a33b; border-radius: 50%; }
-    .brand-mark::after { width: 4px; height: 4px; border-radius: 50%; background: #3287f6; content: ""; }
-    .nav-section { display: grid; gap: 3px; }
-    .nav-link { display: flex; min-height: 34px; align-items: center; gap: 9px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #43494f; font-size: 12px; font-weight: 600; text-align: left; text-decoration: none; }
-    .nav-link.active { background: #f1f2f3; color: #202429; font-weight: 750; }
-    .nav-icon { display: inline-grid; width: 16px; flex: 0 0 16px; place-items: center; color: #8b9299; font-size: 14px; }
-    .nav-label { margin: 16px 5px 4px; color: #a0a6ac; font-size: 10px; }
-    .account-footer { margin-top: auto; padding: 12px 5px 0; border-top: 1px solid var(--line); color: #737a81; font-size: 10px; }
-    .account-footer form { margin-top: 7px; }
-    .account-footer button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-    main { min-width: 0; padding: 28px; }
-    .page-header { display: flex; max-width: 760px; align-items: center; justify-content: space-between; gap: 12px; margin: 0 auto 18px; }
-    h1 { margin: 0; font-size: 18px; }
-    .back-link { color: #626a72; font-size: 12px; text-decoration: none; }
-    .form-card { max-width: 760px; margin: 0 auto; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-    .field { display: grid; align-content: start; gap: 6px; color: #4b5259; font-size: 12px; font-weight: 650; }
-    .field.full { grid-column: 1 / -1; }
-    input, select, textarea { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #e3e6e9; border-radius: 8px; background: #fff; color: #292d32; font-size: 13px; }
-    textarea { min-height: 92px; resize: vertical; line-height: 1.6; }
-    input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid #78b5ff; outline-offset: 2px; }
-    .hint { color: #858c93; font-size: 11px; font-weight: 400; }
-    .preview { min-height: 0; padding: 0 10px; color: #626a72; font-size: 12px; font-weight: 400; line-height: 1.7; white-space: pre-wrap; }
-    .errors { margin: 0 0 18px; padding: 10px 14px 10px 30px; border-radius: 8px; background: #fff2f2; color: #b43c3c; font-size: 12px; line-height: 1.7; }
-    .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
-    .button { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid #e3e6e9; border-radius: 9px; background: #fff; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
-    .button.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
-    @media (max-width: 760px) {
-      .app { grid-template-columns: 54px minmax(0, 1fr); }
-      .sidebar { align-items: center; padding-right: 4px; padding-left: 4px; }
-      .brand { justify-content: center; width: 100%; font-size: 0; }
-      .nav-link { width: 44px; justify-content: center; padding: 0; }
-      .nav-label, .nav-label-text { display: none; }
-      main { padding: 18px 12px; }
-      .form-card { padding: 16px; }
-    }
-    @media (max-width: 520px) {
-      .fields { grid-template-columns: 1fr; }
-      .field.full { grid-column: auto; }
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-question_form.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
-</head>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/question-editor.css') }}">
+  </head>
 <body>
   <div class="app app-standard">
     {% include "partials/sidebar.html" %}
     <main>
-      {% set header_section = "QUESTION EDITOR" %}
-      {% set header_title = "공개 문제 편집" if mode == "edit" else "새 문제 제작" %}
-      {% set header_description = "모든 회원이 함께 관리하는 공개 문항입니다. 수정 내용은 버전 이력에 기록됩니다." %}
+      {% set header_section = "QUESTION WIKI / EDITOR" %}
+      {% set header_title = "문항 수정" if mode == "edit" else "문항 작성" %}
+      {% set header_description = "문제와 해설을 편집하고 공개 문항으로 저장합니다." %}
       {% include "partials/header.html" %}
-      <form class="form-card" method="post" action="{{ url_for('edit_question', question_id=question.id) if mode == 'edit' else url_for('new_question') }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        {% if mode == "edit" %}<input type="hidden" name="base_revision" value="{{ base_revision }}">{% endif %}
-        <p class="hint" style="margin:0 0 16px;padding:11px 13px;border-radius:9px;background:#f1f7fc;color:#52718d;line-height:1.7">
-          {% if mode == "edit" %}이 문항은 모든 회원이 편집할 수 있습니다. 변경 요약과 수정 내용은 버전 이력에 기록됩니다.{% else %}등록한 문제는 모든 회원에게 공개됩니다. 외부 자료는 재배포 및 수정 권한이 있는 문항만 등록해 주세요.{% endif %}
-        </p>
+
+      <div class="editor-layout">
+        <div class="editor-heading">
+          <div>
+            <p class="eyebrow">QUESTION EDITOR</p>
+            <h1>{{ '문항 수정' if mode == 'edit' else '새 문항 작성' }}</h1>
+            <p class="description">문항 정보, 문제 본문, 정답, 해설 및 출처를 입력하세요.</p>
+          </div>
+          <div class="question-id">
+            <span>문항 번호</span>
+            <strong>{{ question_number or '저장 후 발급' }}</strong>
+          </div>
+        </div>
+
+        {% if mode == 'edit' %}
+          <div class="notice">공개 문항의 수정 내용은 최종 저장할 때 새 버전으로 기록됩니다. 임시 저장은 다른 사용자에게 공개되지 않습니다.</div>
+        {% else %}
+          <div class="notice">새 문항은 최종 저장 후 공개 문제 위키에 등록됩니다. 출처 자료는 선택한 라이선스에 따라 공개 및 수정 가능 여부를 확인하세요.</div>
+        {% endif %}
+        {% if draft_saved %}
+          <div class="notice success" role="status">임시 저장이 완료되었습니다. 이 초안은 본인에게만 표시됩니다.{% if draft_updated_at %} 마지막 저장: {{ draft_updated_at }}{% endif %}</div>
+        {% elif draft_updated_at %}
+          <div class="notice success" role="status">저장된 임시 초안을 불러왔습니다. 마지막 저장: {{ draft_updated_at }}</div>
+        {% endif %}
+        {% if draft_conflict %}
+          <div class="notice warning" role="alert">
+            이 초안을 저장한 이후 다른 사용자가 공개 문항을 수정했습니다. 초안은 유지되지만 최종 저장은 최신 버전을 다시 확인해야 합니다.
+            <div class="draft-conflict-actions"><a class="button" href="{{ url_for('edit_question', question_id=question.id, discard_draft=1) }}">초안 버리고 최신 버전 불러오기</a></div>
+          </div>
+        {% endif %}
         {% if errors %}
-        <ul class="errors" role="alert">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+          <ul class="errors" role="alert">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
         {% endif %}
-        <div class="fields">
-          <label class="field">과목
-            <select name="subject" required>
-              <option value="">과목 선택</option>
-              {% for subject in subjects %}
-              <option value="{{ subject }}"{% if form_data.get('subject') == subject %} selected{% endif %}>{{ subject }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label class="field">학년
-            <input name="grade" maxlength="50" value="{{ form_data.get('grade', '') }}" required>
-          </label>
-          <label class="field full">단원
-            <input name="unit" maxlength="200" value="{{ form_data.get('unit', '') }}" required>
-          </label>
-          {% if mode != "edit" %}<label class="field full">폴더 <span class="hint">선택 사항</span>
-            <select name="folder_uuid">
-              <option value="">폴더 미지정</option>
-              {% for folder in folder_options %}
-              <option value="{{ folder.uuid }}"{% if form_data.get('folder_uuid') == folder.uuid %} selected{% endif %}>{% for _ in range(folder.depth) %}　{% endfor %}{{ folder.name }}</option>
-              {% endfor %}
-            </select>
-          </label>{% endif %}
-          <label class="field full">지문 <span class="hint">선택 사항 · 수식은 $...$, \(...\), $$...$$ 또는 \[...\]로 입력</span>
-            <textarea name="passage" maxlength="10000" data-math-input="passage-preview">{{ form_data.get('passage', '') }}</textarea>
-            <output class="preview" id="passage-preview" aria-live="polite"></output>
-          </label>
-          <label class="field full">문제 내용
-            <textarea name="prompt" maxlength="10000" data-math-input="prompt-preview" required>{{ form_data.get('prompt', '') }}</textarea>
-            <output class="preview" id="prompt-preview" aria-live="polite"></output>
-          </label>
-          <label class="field full">보기 <span class="hint">선택 사항 · 수식은 $...$, \(...\), $$...$$ 또는 \[...\]로 입력</span>
-            <textarea name="examples" maxlength="10000" data-math-input="examples-preview">{{ form_data.get('examples', '') }}</textarea>
-            <output class="preview" id="examples-preview" aria-live="polite"></output>
-          </label>
-          <label class="field full">선택지 <span class="hint">선택 사항 · 한 줄에 하나씩 입력</span>
-            <textarea name="choices" data-math-input="choices-preview">{{ form_data.get('choices', '') }}</textarea>
-            <output class="preview" id="choices-preview" aria-live="polite"></output>
-          </label>
-          <label class="field full">답
-            <textarea name="answer" maxlength="2000" data-math-input="answer-preview" required>{{ form_data.get('answer', '') }}</textarea>
-            <output class="preview" id="answer-preview" aria-live="polite"></output>
-          </label>
-          <label class="field full">해설 <span class="hint">선택 사항</span>
-            <textarea name="explanation" maxlength="10000" data-math-input="explanation-preview">{{ form_data.get('explanation', '') }}</textarea>
-            <output class="preview" id="explanation-preview" aria-live="polite"></output>
-          </label>
-          <label class="field full">출처
-            <input name="source" maxlength="300" value="{{ form_data.get('source', '') }}" required>
-          </label>
-          <label class="field">연도 <span class="hint">선택 사항</span>
-            <input name="year" type="number" min="1" max="2200" value="{{ form_data.get('year', '') }}">
-          </label>
-          <label class="field">페이지 <span class="hint">선택 사항</span>
-            <input name="page" type="number" min="1" max="10000" value="{{ form_data.get('page', '') }}">
-          </label>
-        </div>
-        {% if mode == "edit" %}
-        <label class="field" style="margin-top:18px">수정 요약 <span class="hint">변경 이력에 기록됩니다.</span>
-          <input name="summary" maxlength="200" placeholder="예: 지문 오탈자 및 선택지 수정">
-        </label>
-        {% endif %}
-        <div class="actions">
-          <a class="button" href="{{ url_for('main') if mode != 'edit' else url_for('question_history', question_id=question.id) }}">취소</a>
-          <button class="button primary" type="submit">{{ "수정 저장 · 새 버전 만들기" if mode == "edit" else "문제 저장 · 전체 공개" }}</button>
-        </div>
-      </form>
+
+        <form class="editor-form" id="question-form" method="post"
+              action="{{ url_for('edit_question', question_id=question.id) if mode == 'edit' else url_for('new_question') }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          {% if mode == 'edit' %}<input type="hidden" name="base_revision" value="{{ base_revision }}">{% endif %}
+
+          <section class="form-section">
+            <div class="section-heading">
+              <h2>01. 기본 정보</h2>
+              <span class="section-hint"><span class="required">*</span> 필수</span>
+            </div>
+            <div class="fields">
+              <label class="field">문항 제목 <span class="required">*</span>
+                <input name="title" maxlength="200" value="{{ form_data.get('title', '') }}" placeholder="예: 함수의 극한과 연속성">
+                <small>목록에서 문항을 구분할 수 있는 제목</small>
+              </label>
+              <label class="field">과목 <span class="required">*</span>
+                <select name="subject" required>
+                  <option value="">과목 선택</option>
+                  {% for subject in subjects %}
+                    <option value="{{ subject }}"{% if form_data.get('subject') == subject %} selected{% endif %}>{{ subject }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">학년 <span class="required">*</span>
+                <select name="grade" required>
+                  <option value="">선택 안 함</option>
+                  {% for grade in ['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3','대학','기타'] %}
+                    <option value="{{ grade }}"{% if form_data.get('grade') == grade %} selected{% endif %}>{{ grade }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">교육과정
+                <select name="curriculum" id="curriculum-select">
+                  {% for curriculum in curriculum_options %}
+                    <option value="{{ curriculum }}"{% if form_data.get('curriculum', '2015 개정 교육과정') == curriculum %} selected{% endif %}>{{ curriculum }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">교과 / 과목 <small>선택 사항 · 과목에 따라 선택지가 바뀝니다.</small>
+                <select name="course" id="course-select">
+                  <option value="">교과 선택</option>
+                  {% for course in subject_course_options.get(form_data.get('subject', '수학'), []) %}
+                    <option value="{{ course }}"{% if form_data.get('course', '수학Ⅱ') == course %} selected{% endif %}>{{ course }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">단원 <span class="required">*</span>
+                <input name="unit" id="unit-input" list="unit-options" value="{{ form_data.get('unit', '') }}" placeholder="단원 선택 또는 입력" required>
+                <datalist id="unit-options"></datalist>
+              </label>
+              <label class="field">난이도 <span class="required">*</span>
+                <select name="difficulty" required>
+                  {% for value in difficulties %}
+                    <option value="{{ value }}"{% if form_data.get('difficulty', '중') == value %} selected{% endif %}>{{ value }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">문항 유형 <span class="required">*</span>
+                <select name="question_type" id="question-type" required>
+                  {% for value in question_types %}
+                    <option value="{{ value }}"{% if form_data.get('question_type', '단답형') == value %} selected{% endif %}>{{ value }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">배점
+                <input name="points" type="number" min="1" max="100" value="{{ form_data.get('points', 4) }}">
+              </label>
+              <div class="field full standard-box">
+                <label for="achievement-standard">성취기준 <span class="standard-status" id="standard-status">단원을 선택하면 자동으로 입력됩니다.</span></label>
+                <textarea name="achievement_standard" id="achievement-standard" maxlength="4000" placeholder="선택한 교육과정과 단원에 연결된 성취기준이 표시됩니다.">{{ form_data.get('achievement_standard', '') }}</textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="section-heading">
+              <h2>02. 문제 본문</h2>
+              <span class="section-hint">서식 · 수식 · 이미지가 포함된 콘텐츠</span>
+            </div>
+            <div class="fields">
+              <label class="field full">지문 <span class="section-hint">선택 사항</span>
+                <div class="rich-field">
+                  <div class="rich-toolbar" data-toolbar="passage">
+                    <button class="tool-button" type="button" data-command="bold" aria-label="굵게">B</button>
+                    <button class="tool-button" type="button" data-command="italic" aria-label="기울임"><i>I</i></button>
+                    <button class="tool-button" type="button" data-command="underline" aria-label="밑줄"><u>U</u></button>
+                    <span class="tool-divider"></span>
+                    <button class="tool-button" type="button" data-command="bulletList" aria-label="글머리 목록">☷</button>
+                    <button class="tool-button" type="button" data-command="orderedList" aria-label="번호 목록">1.</button>
+                    <span class="tool-divider"></span>
+                    <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
+                    <button class="tool-button" type="button" data-math="block">∑ 블록</button>
+                  </div>
+                  <div class="rich-editor" data-editor="passage"></div>
+                  <textarea class="rich-source" name="passage" data-source="passage">{{ form_data.get('passage', '') }}</textarea>
+                  <div class="math-help">수식은 수식 버튼을 눌러 LaTeX로 입력할 수 있습니다.</div>
+                </div>
+              </label>
+              <label class="field full">문제 내용 <span class="required">*</span>
+                <div class="rich-field">
+                  <div class="rich-toolbar" data-toolbar="prompt">
+                    <button class="tool-button" type="button" data-command="bold" aria-label="굵게">B</button>
+                    <button class="tool-button" type="button" data-command="italic" aria-label="기울임"><i>I</i></button>
+                    <button class="tool-button" type="button" data-command="underline" aria-label="밑줄"><u>U</u></button>
+                    <span class="tool-divider"></span>
+                    <button class="tool-button" type="button" data-command="bulletList" aria-label="글머리 목록">☷</button>
+                    <button class="tool-button" type="button" data-command="orderedList" aria-label="번호 목록">1.</button>
+                    <span class="tool-divider"></span>
+                    <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
+                    <button class="tool-button" type="button" data-math="block">∑ 블록</button>
+                  </div>
+                  <div class="rich-editor" data-editor="prompt"></div>
+                  <textarea class="rich-source" name="prompt" data-source="prompt" required>{{ form_data.get('prompt', '') }}</textarea>
+                  <div class="math-help">수식 입력, 글머리, 문단 서식을 사용해 문제를 완성하세요.</div>
+                </div>
+              </label>
+              <label class="field full">보기 <span class="section-hint">선택 사항</span>
+                <div class="rich-field">
+                  <div class="rich-toolbar" data-toolbar="examples">
+                    <button class="tool-button" type="button" data-command="bold">B</button>
+                    <button class="tool-button" type="button" data-command="italic"><i>I</i></button>
+                    <span class="tool-divider"></span>
+                    <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
+                    <button class="tool-button" type="button" data-math="block">∑ 블록</button>
+                  </div>
+                  <div class="rich-editor" data-editor="examples"></div>
+                  <textarea class="rich-source" name="examples" data-source="examples">{{ form_data.get('examples', '') }}</textarea>
+                </div>
+              </label>
+              <label class="field full">선택지 <span class="choice-help">객관식 문항은 한 줄에 하나씩 입력 · 수식 LaTeX 지원</span>
+                <textarea name="choices" placeholder="① 첫 번째 선택지&#10;② 두 번째 선택지&#10;③ 세 번째 선택지">{{ form_data.get('choices', '') }}</textarea>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="section-heading">
+              <h2>03. 정답</h2>
+              <span class="section-hint">수식 및 서식을 지원합니다.</span>
+            </div>
+            <div class="fields">
+              <label class="field full">정답 <span class="required">*</span>
+                <div class="rich-field">
+                  <div class="rich-toolbar" data-toolbar="answer">
+                    <button class="tool-button" type="button" data-command="bold">B</button>
+                    <button class="tool-button" type="button" data-command="italic"><i>I</i></button>
+                    <button class="tool-button" type="button" data-command="underline"><u>U</u></button>
+                    <span class="tool-divider"></span>
+                    <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
+                    <button class="tool-button" type="button" data-math="block">∑ 블록</button>
+                  </div>
+                  <div class="rich-editor answer-editor" data-editor="answer"></div>
+                  <textarea class="rich-source answer-source" name="answer" data-source="answer" required>{{ form_data.get('answer', '') }}</textarea>
+                  <div class="math-help">예: \(x=2\), 분수, 근호, 행렬 등 수식을 삽입할 수 있습니다.</div>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="section-heading">
+              <h2>04. 해설</h2>
+              <span class="section-hint">상세 풀이 · 선택 사항</span>
+            </div>
+            <div class="rich-field">
+              <div class="rich-toolbar" data-toolbar="explanation">
+                <button class="tool-button" type="button" data-command="bold">B</button>
+                <button class="tool-button" type="button" data-command="italic"><i>I</i></button>
+                <button class="tool-button" type="button" data-command="underline"><u>U</u></button>
+                <span class="tool-divider"></span>
+                <button class="tool-button" type="button" data-command="bulletList">☷</button>
+                <button class="tool-button" type="button" data-command="orderedList">1.</button>
+                <span class="tool-divider"></span>
+                <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
+                <button class="tool-button" type="button" data-math="block">∑ 블록</button>
+              </div>
+              <div class="rich-editor explanation-editor" data-editor="explanation"></div>
+              <textarea class="rich-source explanation-source" name="explanation" data-source="explanation">{{ form_data.get('explanation', '') }}</textarea>
+              <div class="math-help">풀이 과정과 수식을 문서처럼 작성할 수 있습니다.</div>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="section-heading">
+              <h2>05. 출처 및 라이선스</h2>
+              <span class="section-hint">공개 문항의 출처와 이용 조건</span>
+            </div>
+            <div class="source-grid">
+              <label class="field">출처 유형 <span class="required">*</span>
+                <select name="source_type" required>
+                  {% for value in source_types %}
+                    <option value="{{ value }}"{% if form_data.get('source_type', '직접 제작') == value %} selected{% endif %}>{{ value }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">출처명 / 발행기관
+                <input name="source" maxlength="300" value="{{ form_data.get('source', '') }}" placeholder="교재명, 출판사, 평가기관 등">
+              </label>
+              <label class="field">출제 연도
+                <input name="year" type="number" min="1" max="2200" value="{{ form_data.get('year', '') }}" placeholder="예: 2026">
+              </label>
+              <label class="field">시험 / 회차
+                <input name="exam" maxlength="200" value="{{ form_data.get('exam', '') }}" placeholder="예: 10월 전국연합학력평가">
+              </label>
+              <label class="field">원본 문항 번호
+                <input name="original_question_number" maxlength="50" value="{{ form_data.get('original_question_number', '') }}" placeholder="예: 12번">
+              </label>
+              <label class="field">페이지
+                <input name="page" type="number" min="1" max="10000" value="{{ form_data.get('page', '') }}" placeholder="페이지">
+              </label>
+              <label class="field">출처 URL
+                <input name="source_url" type="url" maxlength="1000" value="{{ form_data.get('source_url', '') }}" placeholder="https://...">
+              </label>
+              <label class="field">라이선스 <span class="required">*</span>
+                <select name="license" required>
+                  <option value="">라이선스 선택</option>
+                  {% for value, label in license_choices.items() %}
+                    <option value="{{ value }}"{% if form_data.get('license') == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+            </div>
+            {% if mode == 'edit' %}
+              <label class="field revision-summary-field">수정 요약 <small>최종 저장 시 수정 이력에 표시됩니다.</small>
+                <input name="summary" maxlength="200" value="{{ form_data.get('summary', '') }}" placeholder="예: 문제 본문과 해설 수정">
+              </label>
+            {% endif %}
+          </section>
+
+          <div class="actions">
+            <span class="draft-meta" id="draft-meta" aria-live="polite">
+              {% if draft_updated_at %}임시 저장: {{ draft_updated_at }}{% else %}임시 저장은 공개 문항과 수정 이력에 반영되지 않습니다.{% endif %}
+            </span>
+            <a class="button" href="{{ url_for('main') }}">취소</a>
+            <button class="button draft" type="submit" name="form_action" value="draft" formnovalidate>임시 저장</button>
+            <button class="button primary" type="submit" name="form_action" value="publish">{{ '수정 저장 · 새 버전 만들기' if mode == 'edit' else '저장하기' }}</button>
+          </div>
+        </form>
+      </div>
     </main>
   </div>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
-  <script>
-    const mathOptions = {
-      delimiters: [
-        { left: "$$", right: "$$", display: true },
-        { left: "\\[", right: "\\]", display: true },
-        { left: "\\(", right: "\\)", display: false },
-        { left: "$", right: "$", display: false }
-      ],
-      throwOnError: false
-    };
 
-    window.addEventListener("DOMContentLoaded", () => {
-      document.querySelectorAll("[data-math-input]").forEach((input) => {
-        const preview = document.getElementById(input.dataset.mathInput);
-        const updatePreview = () => {
-          preview.textContent = input.value;
-          renderMathInElement(preview, mathOptions);
-        };
-        input.addEventListener("input", updatePreview);
-        updatePreview();
+  <script type="module">
+    const form = document.getElementById("question-form");
+    const sources = Array.from(document.querySelectorAll("[data-source]"));
+    const editors = new Map();
+
+    try {
+      const [{ Editor }, { default: StarterKit }, { default: Underline }, { Mathematics, migrateMathStrings }] = await Promise.all([
+        import("https://esm.sh/@tiptap/core@3.30.3"),
+        import("https://esm.sh/@tiptap/starter-kit@3.30.3?external=@tiptap/core"),
+        import("https://esm.sh/@tiptap/extension-underline@3.30.3?external=@tiptap/core"),
+        import("https://esm.sh/@tiptap/extension-mathematics@3.30.3?external=@tiptap/core")
+      ]);
+
+      const extensions = [
+        StarterKit,
+        Underline,
+        Mathematics.configure({ katexOptions: { throwOnError: false } })
+      ];
+
+      sources.forEach((source) => {
+        const key = source.dataset.source;
+        const mount = document.querySelector('[data-editor="' + key + '"]');
+        const editor = new Editor({
+          element: mount,
+          extensions,
+          content: source.value || "<p></p>",
+          editorProps: {
+            attributes: {
+              class: "tiptap",
+              "aria-label": key + " 편집기"
+            }
+          },
+          onUpdate: ({ editor: current }) => {
+            source.value = current.getHTML();
+          }
+        });
+        migrateMathStrings(editor);
+        source.required = false;
+        editors.set(key, editor);
+      });
+
+      document.documentElement.classList.add("js-editor-ready");
+      sources.forEach((source) => { source.required = false; });
+
+      document.querySelectorAll("[data-toolbar]").forEach((toolbar) => {
+        const editor = editors.get(toolbar.dataset.toolbar);
+        toolbar.querySelectorAll("button").forEach((button) => {
+          button.addEventListener("click", () => {
+            const command = button.dataset.command;
+            if (command === "bold") editor.chain().focus().toggleBold().run();
+            if (command === "italic") editor.chain().focus().toggleItalic().run();
+            if (command === "underline") editor.chain().focus().toggleUnderline().run();
+            if (command === "bulletList") editor.chain().focus().toggleBulletList().run();
+            if (command === "orderedList") editor.chain().focus().toggleOrderedList().run();
+
+            const math = button.dataset.math;
+            if (math) {
+              const latex = window.prompt("LaTeX 수식을 입력하세요.", "");
+              if (latex === null || !latex.trim()) return;
+              if (math === "inline") editor.chain().focus().insertInlineMath({ latex: latex.trim() }).run();
+              if (math === "block") editor.chain().focus().insertBlockMath({ latex: latex.trim() }).run();
+            }
+          });
+        });
+      });
+
+      form.addEventListener("submit", () => {
+        editors.forEach((editor, key) => {
+          const source = document.querySelector('[data-source="' + key + '"]');
+          source.value = editor.getHTML();
+        });
+      });
+    } catch (error) {
+      console.error("WYSIWYG editor unavailable; using plain text fallback.", error);
+      document.querySelectorAll(".rich-editor").forEach((editor) => {
+        editor.hidden = true;
+      });
+      document.querySelectorAll(".rich-toolbar").forEach((toolbar) => {
+        toolbar.hidden = true;
+      });
+    }
+
+    const curriculum = document.getElementById("curriculum-select");
+    const course = document.getElementById("course-select");
+    const unit = document.getElementById("unit-input");
+    const standards = document.getElementById("achievement-standard");
+    const standardStatus = document.getElementById("standard-status");
+    const courseOptions = {{ course_options|tojson }};
+    const selectedCourse = {{ form_data.get('course', '')|tojson }};
+    const subjectSelect = form.querySelector('[name="subject"]');
+    const subjectCourseOptions = {{ subject_course_options|tojson }};
+    const selectedUnit = {{ form_data.get('unit', '')|tojson }};
+    const storedStandard = {{ form_data.get('achievement_standard', '')|tojson }};
+
+    function rebuildCourses() {
+      const options = subjectCourseOptions[subjectSelect.value] || [];
+      const previous = course.value || selectedCourse;
+      course.innerHTML = '<option value="">교과 선택</option>';
+      options.forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        course.appendChild(option);
+      });
+      if (options.includes(previous)) course.value = previous;
+    }
+
+    async function loadStandards(autofill) {
+      const params = new URLSearchParams({
+        curriculum: curriculum.value,
+        course: course.value,
+        unit: unit.value
+      });
+      try {
+        const response = await fetch("{{ url_for('curriculum_standards') }}?" + params.toString(), {
+          headers: { "Accept": "application/json" }
+        });
+        if (!response.ok) throw new Error("성취기준을 불러오지 못했습니다.");
+        const data = await response.json();
+        const datalist = document.getElementById("unit-options");
+        datalist.innerHTML = "";
+        (data.units || []).forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          datalist.appendChild(option);
+        });
+        if (autofill) {
+          if (data.standards && data.standards.length) {
+            standards.value = data.standards.join("\n");
+            standardStatus.textContent = "선택한 단원에 연결된 성취기준을 자동 입력했습니다.";
+          } else {
+            standards.value = "";
+            standardStatus.textContent = "등록된 자동 매핑이 없습니다. 필요한 경우 직접 입력하세요.";
+          }
+        }
+      } catch (error) {
+        standardStatus.textContent = "자동 입력을 불러오지 못했습니다. 성취기준을 직접 입력할 수 있습니다.";
+      }
+    }
+
+    rebuildCourses();
+    if (selectedUnit) {
+      unit.value = selectedUnit;
+      if (storedStandard) standards.value = storedStandard;
+    }
+    loadStandards(false);
+    subjectSelect.addEventListener("change", () => {
+      rebuildCourses();
+      course.value = "";
+      standards.value = "";
+      unit.value = "";
+      loadStandards(false);
+    });
+    curriculum.addEventListener("change", () => {
+      standards.value = "";
+      unit.value = "";
+      loadStandards(false);
+    });
+    course.addEventListener("change", () => {
+      unit.value = "";
+      standards.value = "";
+      loadStandards(false);
+    });
+    unit.addEventListener("change", () => loadStandards(true));
+
+    form.addEventListener("submit", (event) => {
+      const submitter = event.submitter;
+      if (submitter && submitter.value === "draft") return;
+      sources.forEach((source) => {
+        const editor = editors.get(source.dataset.source);
+        if (editor) source.value = editor.getHTML();
       });
     });
   </script>

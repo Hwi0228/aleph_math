@@ -1,0 +1,11 @@
+:root { font-family:"Pretendard","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#24364B; background:#F4F7FA; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; }
+    main.admin-main { width:min(100%,1100px); min-width:0; margin:0 auto; padding:30px clamp(18px,3vw,42px); }
+    .user-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .user-card { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:17px; border:1px solid #E3E9EF; border-radius:11px; background:#fff; }
+    .user-name { color:#24364B; font-size:12px; font-weight:750; }
+    .user-meta { margin-top:6px; color:#8491A0; font-size:10px; }
+    .view-link { flex:0 0 auto; padding:8px 11px; border-radius:8px; background:#EAF1F8; color:#356A9A; font-size:10px; font-weight:750; text-decoration:none; }
+    .empty { grid-column:1/-1; padding:35px; border:1px dashed #D8E1E9; border-radius:10px; color:#8491A0; text-align:center; font-size:12px; }
+    @media(max-width:600px) { .user-list { grid-template-columns:1fr; } }

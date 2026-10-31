@@ -1,0 +1,6 @@
+
+.editor-layout { max-width: 980px; margin: 0 auto; padding: 25px 30px 50px; }
+.draft-conflict-actions, .revision-summary-field { margin-top: 14px; }
+.draft-conflict-actions { margin-top: 9px; }
+@media (max-width:760px) { .editor-layout { padding:18px 13px 36px; } }
+@media (max-width:540px) { .editor-layout { padding-bottom:36px; } }

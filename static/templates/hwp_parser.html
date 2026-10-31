@@ -5,73 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f7f8">
   <title>HWP 파싱 | Aleph Math</title>
-  <style>
-    :root { font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #292d32; background: #f6f7f8; --line: #eceef0; --blue: #3183f6; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-width: 320px; min-height: 100vh; }
-    button, input, textarea, select { font: inherit; }
-    a { color: inherit; }
-    .app { display: grid; grid-template-columns: 172px minmax(0, 1fr); min-height: 100vh; }
-    .sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 0 10px 12px; background: #fff; border-right: 1px solid var(--line); }
-    .brand { display: flex; height: 49px; align-items: center; gap: 6px; padding: 0 2px; font-size: 15px; font-weight: 800; white-space: nowrap; }
-    .brand-mark { display: grid; width: 16px; height: 16px; place-items: center; border: 4px solid #17191c; border-right-color: #f3a33b; border-radius: 50%; }
-    .brand-mark::after { width: 4px; height: 4px; border-radius: 50%; background: #3287f6; content: ""; }
-    .nav-section { display: grid; gap: 3px; }
-    .nav-label { margin: 16px 5px 4px; color: #a0a6ac; font-size: 10px; }
-    .nav-link { display: flex; min-height: 34px; align-items: center; gap: 9px; padding: 0 8px; border-radius: 8px; color: #43494f; font-size: 12px; font-weight: 600; text-decoration: none; }
-    .nav-link:hover { background: #f5f7f9; }
-    .nav-link.active { background: #f1f2f3; color: #202429; font-weight: 750; }
-    .nav-icon { display: inline-grid; width: 16px; flex: 0 0 16px; place-items: center; color: #8b9299; font-size: 14px; }
-    .account-footer { margin-top: auto; padding: 12px 5px 0; border-top: 1px solid var(--line); color: #737a81; font-size: 10px; }
-    .account-footer form { margin-top: 7px; }
-    .account-footer button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-    main { width: min(100%, 1020px); margin: 0 auto; padding: 30px 24px; }
-    .page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-    h1 { margin: 0; font-size: 20px; }
-    h2 { margin: 0 0 8px; font-size: 15px; }
-    .hint { color: #7b838b; font-size: 12px; line-height: 1.7; }
-    .card { margin-bottom: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-    .upload-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 16px; }
-    .import-form { display: grid; gap: 14px; }
-    .metadata-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-    .metadata-field { display: grid; gap: 6px; color: #59616a; font-size: 12px; font-weight: 650; }
-    .metadata-field input, .metadata-field select { width: 100%; min-height: 36px; padding: 0 9px; border: 1px solid #e3e6e9; border-radius: 8px; background: #fff; }
-    .question-select { display: flex; align-items: flex-start; gap: 9px; }
-    .question-select input { margin-top: 2px; accent-color: var(--blue); }
-    .question h3 { display: flex; align-items: center; gap: 8px; }
-    .file-field { display: grid; flex: 1 1 320px; gap: 7px; font-size: 12px; font-weight: 650; }
-    input[type="file"] { width: 100%; padding: 9px; border: 1px solid #e3e6e9; border-radius: 8px; background: #fff; font-size: 12px; }
-    .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid #e3e6e9; border-radius: 9px; background: #fff; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
-    .button.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
-    .error { margin: 0 0 16px; padding: 12px 14px; border-radius: 8px; background: #fff2f2; color: #b43c3c; font-size: 12px; line-height: 1.6; }
-    .results-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-    .results-header h2 { margin: 0; }
-    .question { padding: 16px 0; border-top: 1px solid var(--line); }
-    .question:first-of-type { border-top: 0; }
-    .question h3 { margin: 0 0 8px; font-size: 13px; }
-    .question p { margin: 6px 0; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; white-space: pre-wrap; }
-    .label { color: #66707a; font-weight: 700; }
-    .choices { margin: 6px 0; padding-left: 20px; font-size: 12px; line-height: 1.8; }
-    details { margin-top: 8px; color: #59616a; font-size: 12px; }
-    details summary { cursor: pointer; font-weight: 650; }
-    .json-output { width: 100%; min-height: 220px; margin-top: 14px; padding: 12px; border: 1px solid #e3e6e9; border-radius: 9px; font: 11px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; resize: vertical; }
-    [hidden] { display: none !important; }
-    @media (max-width: 760px) {
-      .app { grid-template-columns: 54px minmax(0, 1fr); }
-      .sidebar { align-items: center; padding-right: 4px; padding-left: 4px; }
-      .brand { justify-content: center; width: 100%; font-size: 0; }
-      .nav-link { width: 44px; justify-content: center; padding: 0; }
-      .nav-label, .nav-label-text { display: none; }
-      main { padding: 20px 12px; }
-      .card { padding: 16px; }
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-hwp_parser.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/hwp-import.css') }}">
 </head>
 <body>
   <div class="app app-standard">
     {% include "partials/sidebar.html" %}
-    <main>
+    <main class="hwp-main">
       {% set header_section = "DOCUMENT IMPORT" %}
       {% set header_title = "HWP 문항 파싱" %}
       {% set header_description = "HWPX 또는 HWPML 문서에서 문항을 추출하고 문제 DB에 등록합니다." %}
@@ -89,6 +34,23 @@
           </label>
           <button class="button primary" type="submit">문항 추출</button>
         </form>
+        <ol class="processing-log" id="processing-log" aria-live="polite">
+          <li class="{% if questions %}done{% elif error %}error{% else %}active{% endif %}" id="log-file">
+            {% if questions %}문서 파일 확인 완료{% elif error %}파일 확인 중 오류{% else %}파일 선택 대기{% endif %}
+          </li>
+          <li class="{% if questions %}done{% elif error %}error{% endif %}" id="log-upload">
+            {% if questions %}서버 업로드 완료{% elif error %}업로드 또는 요청 실패{% else %}서버 업로드 대기{% endif %}
+          </li>
+          <li class="{% if questions %}done{% elif error %}error{% endif %}" id="log-extract">
+            {% if questions %}문항 구조 추출 완료 · {{ questions|length }}문항{% elif error %}문항 추출 실패{% else %}문항 추출 대기{% endif %}
+          </li>
+          <li class="{% if questions %}active{% endif %}" id="log-review">
+            {% if questions %}추출 결과 확인 및 등록 대상 선택{% else %}결과 검토 대기{% endif %}
+          </li>
+        </ol>
+        <p class="hint" id="process-feedback" role="status">
+          {% if questions %}추출된 문항을 확인하고 등록할 문항만 선택하세요.{% elif error %}오류 내용을 확인한 뒤 파일 형식과 문서 상태를 점검하세요.{% else %}파일을 선택하면 처리 단계가 여기에 기록됩니다.{% endif %}
+        </p>
       </section>
       {% if questions %}
       <section class="card" aria-labelledby="results-heading">
@@ -124,14 +86,22 @@
               <label class="metadata-field">연도
                 <input name="year" type="number" min="1" max="2200" value="{{ form_data.get('year', '') }}">
               </label>
-              <label class="metadata-field">폴더
-                <select name="folder_uuid">
-                  <option value="">폴더 미지정</option>
-                  {% for folder in folders %}
-                  <option value="{{ folder.uuid }}"{% if form_data.get('folder_uuid') == folder.uuid %} selected{% endif %}>{{ folder.name }}</option>
+              <label class="metadata-field">출처 유형
+                <select name="source_type">
+                  {% for value in source_types %}
+                  <option value="{{ value }}"{% if form_data.get('source_type', '기타') == value %} selected{% endif %}>{{ value }}</option>
                   {% endfor %}
                 </select>
               </label>
+              <label class="metadata-field">라이선스
+                <select name="license" required>
+                  <option value="">라이선스 선택</option>
+                  {% for value, label in license_choices.items() %}
+                  <option value="{{ value }}"{% if form_data.get('license') == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+
             </div>
           </div>
           {% for question in questions %}
@@ -140,7 +110,7 @@
             <p><span class="label">문제</span><br>{{ question.question }}</p>
             {% if question.choices %}
             <p class="label">선택지</p>
-            <ol class="choices" style="list-style: none">
+            <ol class="choices imported-choices">
               {% for choice in question.choices %}<li>{{ '①②③④⑤'[loop.index0] if loop.index0 < 5 else loop.index ~ '.' }} {{ choice }}</li>{% endfor %}
             </ol>
             {% endif %}
@@ -155,18 +125,6 @@
       {% endif %}
     </main>
   </div>
-  {% if result_json %}
-  <script>
-    document.getElementById("download-json").addEventListener("click", () => {
-      const blob = new Blob([document.getElementById("json-result").value], { type: "application/json;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "questions.json";
-      link.click();
-      URL.revokeObjectURL(url);
-    });
-  </script>
-  {% endif %}
+  <script defer src="{{ url_for('static', filename='scripts/hwp-import.js') }}"></script>
 </body>
 </html>
