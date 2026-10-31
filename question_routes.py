@@ -518,7 +518,7 @@ def get_question_page_data():
         parameters.extend(
             [selected_folder_uuid, selected_user_uuid, selected_user_uuid]
         )
-    query += " ORDER BY id DESC"
+    query += " ORDER BY questions.id DESC"
     rows = get_db().execute(query, parameters).fetchall()
     questions = []
     for row in rows:

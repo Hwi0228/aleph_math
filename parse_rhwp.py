@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import re
 from collections import OrderedDict
 from typing import Any, Iterable
@@ -272,17 +273,20 @@ def parse_questions_from_rhwp_bytes(
     if len(content) > MAX_DOCUMENT_BYTES:
         raise ValueError("문서 크기가 허용 한도(12MB)를 초과합니다.")
 
+    if importlib.util.find_spec("rhwp") is None:
+        raise RuntimeError(
+            "HWP/HWPX 파싱에 필요한 rhwp-python이 설치되지 않았습니다. "
+            "requirements.txt의 의존성을 설치해 주세요."
+        )
+
     try:
         import rhwp
 
         document = rhwp.Document.from_bytes(content, source_uri=f"upload://{filename}")
         ir = document.to_ir()
-    except ImportError as exc:
-        raise RuntimeError(
-            "HWP/HWPX 파싱에 필요한 rhwp-python이 설치되지 않았습니다. "
-            "requirements.txt의 의존성을 설치해 주세요."
-        ) from exc
     except Exception as exc:
+        # A present package can still fail to import because of an incompatible
+        # optional/native dependency. Do not misreport that as a missing package.
         raise ValueError(f"rhwp-python이 문서를 해석하지 못했습니다: {exc}") from exc
 
     return parse_questions_from_ir(ir)

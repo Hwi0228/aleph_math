@@ -170,7 +170,8 @@ class QuestionRegistrationTests(unittest.TestCase):
             "/curriculum/standards?curriculum=2015%20개정%20교육과정&course=수학Ⅱ&unit=함수의%20극한"
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("[12수학Ⅱ01-01]".encode(), response.data)
+        payload = response.get_json()
+        self.assertIn("[12수학Ⅱ01-01]", payload["standards"][0])
 
     def test_personal_question_notes_are_private_to_each_member(self):
         self.csrf_post(self.client, "/questions/new", data=self.valid_question())
@@ -262,7 +263,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("등록한 문제".encode(), response.data)
+        self.assertIn("최근 등록 문제".encode(), response.data)
         self.assertIn("대시보드 최근 문항".encode(), response.data)
         self.assertIn(b'href="/questions"', response.data)
 
