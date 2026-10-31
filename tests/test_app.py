@@ -873,25 +873,47 @@ class EditorFrontendRegressionTests(unittest.TestCase):
             stylesheet,
         )
 
-    def test_tiptap_external_core_import_is_resolved_before_module_execution(self):
+    def test_tiptap_uses_only_core_and_starter_kit_cdn_modules(self):
         template = (
             Path(__file__).resolve().parents[1]
             / "static"
             / "templates"
             / "question_form.html"
         ).read_text(encoding="utf-8")
-        import_map_tag = '<script type="importmap">'
-        module_tag = '<script type="module">'
-        self.assertIn(import_map_tag, template)
-        self.assertLess(template.index(import_map_tag), template.index(module_tag))
-
-        import_map_json = template.split(import_map_tag, 1)[1].split(
-            "</script>", 1
-        )[0]
-        import_map = json.loads(import_map_json)
-        self.assertEqual(
-            import_map["imports"]["@tiptap/core"],
-            "https://esm.sh/@tiptap/core@3.30.3",
+        self.assertIn(
+            "https://cdn.jsdelivr.net/npm/@tiptap/core@3.30.3/+esm",
+            template,
         )
-        self.assertIn("?external=@tiptap/core", template)
+        self.assertIn(
+            "https://cdn.jsdelivr.net/npm/@tiptap/starter-kit@3.30.3/+esm",
+            template,
+        )
+        self.assertNotIn("@tiptap/extension-mathematics", template)
+        self.assertNotIn("https://esm.sh/@tiptap/", template)
+        self.assertIn("const [{ Editor, Node }, { default: StarterKit }]", template)
+
+    def test_math_nodes_are_defined_locally_without_a_prosemirror_extension_import(self):
+        template = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "templates"
+            / "question_form.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('name: type === "inline-math" ? "inlineMath" : "blockMath"', template)
+        self.assertIn('createMathNode("inline-math", "span")', template)
+        self.assertIn('createMathNode("block-math", "div")', template)
+        self.assertIn('window.katex.render(latex, dom', template)
+        self.assertIn('type: math === "inline" ? "inlineMath" : "blockMath"', template)
+        self.assertNotIn("migrateMathStrings", template)
+
+    def test_optional_number_inputs_do_not_render_python_none(self):
+        template = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "templates"
+            / "question_form.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("form_data.get('points', 4)|default(4, true)", template)
+        self.assertIn("form_data.get('year', '')|default('', true)", template)
+        self.assertIn("form_data.get('page', '')|default('', true)", template)
 
