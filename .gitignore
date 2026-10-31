@@ -1,5 +1,4 @@
 venv/
-ocr_model_competiton/cropped_lines
 .vscode/
 __pycache__/
 instance/*.sqlite3
