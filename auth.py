@@ -100,8 +100,8 @@ def signup():
         errors.append("올바른 이메일 주소를 입력해 주세요.")
     if not display_name or len(display_name) > 80:
         errors.append("이름은 1자 이상 80자 이내로 입력해 주세요.")
-    if len(password) < 12 or len(password) > 256:
-        errors.append("비밀번호는 12자 이상 256자 이내로 입력해 주세요.")
+    if len(password) < 8 or len(password) > 256:
+        errors.append("비밀번호는 8자 이상 256자 이내로 입력해 주세요.")
     if password != password_confirm:
         errors.append("비밀번호가 일치하지 않습니다.")
     if errors:

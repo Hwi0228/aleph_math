@@ -40,11 +40,11 @@
           <input name="email" type="email" maxlength="254" autocomplete="email" value="{{ form_data.get('email', '') }}" required>
         </label>
         <label>비밀번호
-          <input name="password" type="password" minlength="12" maxlength="256" autocomplete="{{ 'new-password' if mode == 'signup' else 'current-password' }}" required>
+          <input name="password" type="password" minlength="8" maxlength="256" autocomplete="{{ 'new-password' if mode == 'signup' else 'current-password' }}" required>
         </label>
         {% if mode == 'signup' %}
         <label>비밀번호 확인
-          <input name="password_confirm" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
+          <input name="password_confirm" type="password" minlength="8" maxlength="256" autocomplete="new-password" required>
         </label>
         {% endif %}
         <button type="submit">{{ '회원가입' if mode == 'signup' else '로그인' }}</button>
