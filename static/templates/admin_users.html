@@ -3,42 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>계정별 데이터 | Aleph Math</title>
+  <meta name="theme-color" content="#F4F7FA">
+  <title>계정별 데이터 관리 | ALEPH MATH</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
   <style>
-    :root { font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #292d32; background: #f6f7f8; }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 28px 18px; }
-    main { width: min(100%, 820px); margin: 0 auto; }
-    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-    h1 { margin: 0; font-size: 20px; }
-    a { color: #3183f6; }
-    .user-list { display: grid; gap: 10px; }
-    .user-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid #eceef0; border-radius: 12px; background: #fff; }
-    .user-name { font-weight: 700; }
-    .user-meta { margin-top: 5px; color: #858c93; font-size: 12px; }
-    .view-link { flex: 0 0 auto; padding: 8px 11px; border-radius: 8px; background: #eff7ff; font-size: 12px; text-decoration: none; }
-    .empty { color: #858c93; text-align: center; }
+    :root { font-family:"Pretendard","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#24364B; background:#F4F7FA; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; }
+    main.admin-main { width:min(100%,1100px); min-width:0; margin:0 auto; padding:30px clamp(18px,3vw,42px); }
+    .user-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .user-card { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:17px; border:1px solid #E3E9EF; border-radius:11px; background:#fff; }
+    .user-name { color:#24364B; font-size:12px; font-weight:750; }
+    .user-meta { margin-top:6px; color:#8491A0; font-size:10px; }
+    .view-link { flex:0 0 auto; padding:8px 11px; border-radius:8px; background:#EAF1F8; color:#356A9A; font-size:10px; font-weight:750; text-decoration:none; }
+    .empty { grid-column:1/-1; padding:35px; border:1px dashed #D8E1E9; border-radius:10px; color:#8491A0; text-align:center; font-size:12px; }
+    @media(max-width:600px) { .user-list { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>계정별 데이터 관리</h1>
-      <a href="{{ url_for('main') }}">문제 DB로 돌아가기</a>
-    </header>
-    <section class="user-list" aria-label="사용자 계정">
-      {% for user in users %}
-      <article class="user-card">
-        <div>
-          <div class="user-name">{{ user.display_name }}{% if user.role == 'admin' %} · 관리자{% endif %}</div>
-          <div class="user-meta">{{ user.email }} · 문제 {{ user.question_count }}개</div>
-        </div>
-        <a class="view-link" href="{{ url_for('main', user_uuid=user.uuid) }}">문제 보기</a>
-      </article>
-      {% else %}
-      <p class="empty">등록된 계정이 없습니다.</p>
-      {% endfor %}
-    </section>
-  </main>
+  <div class="app app-standard">
+    {% include "partials/sidebar.html" %}
+    <main class="admin-main">
+      {% set header_section = "ADMINISTRATION" %}
+      {% set header_title = "계정별 데이터 관리" %}
+      {% set header_description = "사용자별 문제 데이터 현황을 확인합니다." %}
+      {% include "partials/header.html" %}
+      <section class="user-list" aria-label="사용자 계정">
+        {% for user in users %}
+        <article class="user-card">
+          <div>
+            <div class="user-name">{{ user.display_name }}{% if user.role == 'admin' %} · 관리자{% endif %}</div>
+            <div class="user-meta">{{ user.email }} · 문제 {{ user.question_count }}개</div>
+          </div>
+          <a class="view-link" href="{{ url_for('main', user_uuid=user.uuid) }}">문제 보기 ↗</a>
+        </article>
+        {% else %}
+        <p class="empty">등록된 계정이 없습니다.</p>
+        {% endfor %}
+      </section>
+    </main>
+  </div>
 </body>
 </html>

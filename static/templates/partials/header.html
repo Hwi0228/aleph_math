@@ -1,0 +1,11 @@
+<header class="site-header">
+  <div class="site-header-copy">
+    <div class="site-breadcrumb">ALEPH MATH <span aria-hidden="true">/</span> {{ header_section|default('WORKSPACE') }}</div>
+    {% if header_title %}<h1>{{ header_title }}</h1>{% endif %}
+    {% if header_description %}<p>{{ header_description }}</p>{% endif %}
+  </div>
+  <div class="site-header-actions">
+    <a class="site-button subtle" href="{{ url_for('main') }}">문제 DB</a>
+    <a class="site-button primary" href="{{ url_for('new_question') }}">＋ 문제 제작</a>
+  </div>
+</header>

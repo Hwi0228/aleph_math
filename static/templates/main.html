@@ -426,6 +426,7 @@
       .select-all { gap: 5px; font-size: 9px; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
 </head>
 <body>
   {% macro render_folder(folder) %}
@@ -440,28 +441,8 @@
     {% if folder.children %}<div class="folder-children">{% for child in folder.children %}{{ render_folder(child) }}{% endfor %}</div>{% endif %}
   </div>
   {% endmacro %}
-  <div class="app">
-    <aside class="sidebar" aria-label="주 메뉴">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Aleph Math</div>
-      <nav class="nav-section">
-        <div class="nav-label">문제 관리</div>
-        {% for item in nav_items %}
-        <a class="nav-link{% if item.endpoint == 'main' %} active{% endif %}" href="{{ url_for(item.endpoint) }}"{% if item.endpoint == 'main' %} aria-current="page"{% endif %}>
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
-          <span class="nav-label-text">{{ item.label }}</span>
-        </a>
-        {% endfor %}
-      </nav>
-      <div class="account-footer">
-        <div class="account-name">{{ current_user.display_name }}</div>
-        <div class="account-role">{{ '관리자' if current_user.role == 'admin' else '사용자' }}</div>
-        {% if current_user.role == 'admin' %}<a class="account-link" href="{{ url_for('admin_users') }}">계정별 데이터</a>{% endif %}
-        <form method="post" action="{{ url_for('logout') }}">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <button type="submit">로그아웃</button>
-        </form>
-      </div>
-    </aside>
+  <div class="app app-question-bank">
+    {% include "partials/sidebar.html" %}
 
     <aside class="filter-panel" aria-label="문제 DB 필터">
       <div class="section-title">문제 DB</div>
@@ -503,6 +484,10 @@
     </aside>
 
     <main class="results">
+      {% set header_section = "QUESTION BANK" %}
+      {% set header_title = "문제 데이터베이스" %}
+      {% set header_description = "과목과 폴더를 기준으로 문제를 탐색하고 관리하세요." %}
+      {% include "partials/header.html" %}
       <header class="results-header">
         <label class="select-all"><input type="checkbox" aria-label="전체 선택"> 전체 선택{% if questions %} <span class="result-count">{{ "{:,}".format(questions | length) }}</span>{% endif %}</label>
         <select class="select-control" aria-label="정렬">

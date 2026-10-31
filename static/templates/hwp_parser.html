@@ -66,32 +66,16 @@
       .card { padding: 16px; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar" aria-label="주 메뉴">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Aleph Math</div>
-      <nav class="nav-section">
-        <div class="nav-label">문제 관리</div>
-        {% for item in nav_items %}
-        <a class="nav-link{% if item.endpoint == 'hwp_parser_page' %} active{% endif %}" href="{{ url_for(item.endpoint) }}" {% if item.endpoint == 'hwp_parser_page' %}aria-current="page"{% endif %}>
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span><span class="nav-label-text">{{ item.label }}</span>
-        </a>
-        {% endfor %}
-      </nav>
-      <div class="account-footer">
-        {{ current_user.display_name }} · {{ '관리자' if current_user.role == 'admin' else '사용자' }}
-        <form method="post" action="{{ url_for('logout') }}">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <button type="submit">로그아웃</button>
-        </form>
-      </div>
-    </aside>
+  <div class="app app-standard">
+    {% include "partials/sidebar.html" %}
     <main>
-      <header class="page-header">
-        <h1>HWP 문항 파싱</h1>
-        <a class="button" href="{{ url_for('main') }}">문제 DB로 돌아가기</a>
-      </header>
+      {% set header_section = "DOCUMENT IMPORT" %}
+      {% set header_title = "HWP 문항 파싱" %}
+      {% set header_description = "HWPX 또는 HWPML 문서에서 문항을 추출하고 문제 DB에 등록합니다." %}
+      {% include "partials/header.html" %}
       <section class="card">
         <h2>시험 파일 업로드</h2>
         <p class="hint">HWPX 또는 HWPML section0.xml을 올리면 문항, 선택지, 정답, 해설을 추출합니다. 수식은 hml-equation-parser로 LaTeX로 변환합니다. HWPX에서는 첫 번째 섹션만 처리하며 그림 자체는 추출되지 않습니다.</p>
