@@ -20,9 +20,7 @@ def dashboard():
                 WHEN unit <> '' THEN subject || '|' || grade || '|' || unit
             END) AS unit_count
         FROM questions
-        WHERE user_uuid = ?
-        """,
-        (user_uuid,),
+        """
     ).fetchone()
     folder_count = connection.execute(
         "SELECT COUNT(*) FROM folders WHERE user_uuid = ?",
@@ -33,11 +31,9 @@ def dashboard():
         """
         SELECT subject, COUNT(*) AS count
         FROM questions
-        WHERE user_uuid = ?
         GROUP BY subject
         ORDER BY count DESC, subject COLLATE NOCASE
-        """,
-        (user_uuid,),
+        """
     ).fetchall()
 
     recent_questions = connection.execute(
@@ -45,11 +41,9 @@ def dashboard():
         SELECT id, subject, grade, unit, passage, prompt, examples,
                choices, source, year, page
         FROM questions
-        WHERE user_uuid = ?
         ORDER BY id DESC
         LIMIT 6
-        """,
-        (user_uuid,),
+        """
     ).fetchall()
     questions = []
     for row in recent_questions:

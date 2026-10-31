@@ -335,6 +335,9 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    .question-wiki-meta { margin-top: 8px; color: #9299a1; font-size: 9px; }
+    .question-wiki-actions { display: flex; gap: 6px; margin-top: 7px; }
+    .question-wiki-actions .detail-button { display: inline-flex; align-items: center; margin-left: 0; text-decoration: none; }
     .question-folder-form { display: flex; gap: 5px; margin-top: 7px; }
     .question-folder-form select { flex: 1; }
     .question-folder-form button { padding: 0 9px; }
@@ -464,7 +467,7 @@
         {% else %}
         <p class="empty-state">아직 만든 폴더가 없습니다.</p>
         {% endif %}
-        {% if can_manage_questions %}<details>
+        {% if can_manage_folders %}<details>
           <summary class="tree-heading">＋ 새 폴더</summary>
           <form class="folder-create" method="post" action="{{ url_for('new_folder') }}">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -484,9 +487,9 @@
     </aside>
 
     <main class="results">
-      {% set header_section = "QUESTION BANK" %}
-      {% set header_title = "문제 데이터베이스" %}
-      {% set header_description = "과목과 폴더를 기준으로 문제를 탐색하고 관리하세요." %}
+      {% set header_section = "PUBLIC QUESTION WIKI" %}
+      {% set header_title = "공개 문제 위키" %}
+      {% set header_description = "모든 회원이 문항을 함께 탐색·편집하고, 변경 이력을 투명하게 관리합니다." %}
       {% include "partials/header.html" %}
       <header class="results-header">
         <label class="select-all"><input type="checkbox" aria-label="전체 선택"> 전체 선택{% if questions %} <span class="result-count">{{ "{:,}".format(questions | length) }}</span>{% endif %}</label>
@@ -532,7 +535,12 @@
               {% if question.source %}{{ question.source }}{% endif %}
             </div>
             {% endif %}
-            {% if can_manage_questions %}<form class="question-folder-form" method="post" action="{{ url_for('move_question', question_id=question.id) }}">
+            <div class="question-wiki-meta">작성자 {{ question.author_name or "탈퇴한 사용자" }} · 현재 v{{ question.revision_number }}</div>
+            <div class="question-wiki-actions">
+              <a class="detail-button" href="{{ url_for('edit_question', question_id=question.id) }}">편집</a>
+              <a class="detail-button" href="{{ url_for('question_history', question_id=question.id) }}">수정 이력</a>
+            </div>
+            {% if question.can_manage_folder %}<form class="question-folder-form" method="post" action="{{ url_for('move_question', question_id=question.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="subject" value="{{ selected_subject }}">
               {% if selected_folder_uuid %}<input type="hidden" name="current_folder" value="{{ selected_folder_uuid }}">{% endif %}
