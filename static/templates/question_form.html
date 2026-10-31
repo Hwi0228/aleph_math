@@ -62,32 +62,16 @@
       .field.full { grid-column: auto; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar" aria-label="주 메뉴">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Aleph Math</div>
-      <nav class="nav-section">
-        <div class="nav-label">문제 관리</div>
-        {% for item in nav_items %}
-        <a class="nav-link{% if item.endpoint == 'new_question' %} active{% endif %}" href="{{ url_for(item.endpoint) }}"{% if item.endpoint == 'new_question' %} aria-current="page"{% endif %}>
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span><span class="nav-label-text">{{ item.label }}</span>
-        </a>
-        {% endfor %}
-      </nav>
-      <div class="account-footer">
-        {{ current_user.display_name }} · {{ '관리자' if current_user.role == 'admin' else '사용자' }}
-        <form method="post" action="{{ url_for('logout') }}">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <button type="submit">로그아웃</button>
-        </form>
-      </div>
-    </aside>
+  <div class="app app-standard">
+    {% include "partials/sidebar.html" %}
     <main>
-      <header class="page-header">
-        <h1>문제 등록</h1>
-        <a class="back-link" href="{{ url_for('main') }}">문제 DB로 돌아가기</a>
-      </header>
+      {% set header_section = "QUESTION EDITOR" %}
+      {% set header_title = "새 문제 제작" %}
+      {% set header_description = "교과 정보와 지문, 수식, 보기 및 정답을 입력하세요." %}
+      {% include "partials/header.html" %}
       <form class="form-card" method="post" action="{{ url_for('new_question') }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         {% if errors %}

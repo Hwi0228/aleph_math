@@ -358,54 +358,17 @@
       .question-grid { grid-template-columns: 1fr; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar" aria-label="주 메뉴">
-      <a class="brand" href="{{ url_for('dashboard') }}">
-        <span class="brand-mark" aria-hidden="true">ℵ</span>
-        <span>ALEPH MATH</span>
-      </a>
-      <nav class="nav-section" aria-label="주 메뉴">
-        <div class="nav-label">WORKSPACE</div>
-        {% for item in nav_items %}
-        <a class="nav-link{% if item.endpoint == 'dashboard' %} active{% endif %}" href="{{ url_for(item.endpoint) }}"{% if item.endpoint == 'dashboard' %} aria-current="page"{% endif %}>
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
-        </a>
-        {% endfor %}
-      </nav>
-      <div class="sidebar-spacer"></div>
-      <div class="sidebar-note">
-        <strong>MATHEMATICS WITHOUT LIMITS</strong>
-        <p>개념을 탐구하고, 나만의 문제를 만들고, 새로운 관점을 공유하세요.</p>
-      </div>
-      <div class="account-footer">
-        <div class="avatar" aria-hidden="true">{{ current_user.display_name[:1] }}</div>
-        <div class="account-details">
-          <div class="account-name">{{ current_user.display_name }}</div>
-          <div class="account-role">{{ '관리자' if current_user.role == 'admin' else '사용자' }}</div>
-        </div>
-        <div class="account-actions">
-          {% if current_user.role == 'admin' %}<a href="{{ url_for('admin_users') }}">계정 관리</a>{% endif %}
-          <form method="post" action="{{ url_for('logout') }}">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">로그아웃</button>
-          </form>
-        </div>
-      </div>
-    </aside>
+  <div class="app app-standard">
+    {% include "partials/sidebar.html" %}
 
     <main class="main-area">
       <div class="content">
-        <header class="topbar">
-          <div class="breadcrumb">ALEPH MATH <span aria-hidden="true">/</span> Dashboard</div>
-          <div class="topbar-actions">
-            <span class="topbar-user">{{ current_user.display_name }}</span>
-            <a class="button" href="{{ url_for('main') }}">문제 DB 보기</a>
-            <a class="button primary" href="{{ url_for('new_question') }}">＋ 문제 등록</a>
-          </div>
-        </header>
+        {% set header_section = "DASHBOARD" %}
+        {% set header_title = "대시보드" %}
+        {% include "partials/header.html" %}
 
         <section class="page-heading">
           <div class="eyebrow">YOUR MATHEMATICS WORKSPACE</div>

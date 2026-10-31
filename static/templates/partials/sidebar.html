@@ -1,0 +1,21 @@
+<aside class="sidebar" aria-label="주 메뉴">
+  <a class="brand" href="{{ url_for('dashboard') }}">
+    <span class="brand-mark" aria-hidden="true">ℵ</span>
+    <span class="brand-name">ALEPH MATH</span>
+  </a>
+  <div class="nav-label">WORKSPACE</div>
+  <nav class="nav-section" aria-label="주 메뉴">
+    <a class="nav-link{% if request.endpoint == 'dashboard' %} active{% endif %}" href="{{ url_for('dashboard') }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label-text">대시보드</span></a>
+    <a class="nav-link{% if request.endpoint == 'main' %} active{% endif %}" href="{{ url_for('main') }}"{% if request.endpoint == 'main' %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label-text">문제 DB</span></a>
+    <a class="nav-link{% if request.endpoint == 'hwp_parser_page' %} active{% endif %}" href="{{ url_for('hwp_parser_page') }}"{% if request.endpoint == 'hwp_parser_page' %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">◇</span><span class="nav-label-text">HWP 파싱</span></a>
+    <a class="nav-link{% if request.endpoint == 'new_question' %} active{% endif %}" href="{{ url_for('new_question') }}"{% if request.endpoint == 'new_question' %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">＋</span><span class="nav-label-text">문제 등록</span></a>
+  </nav>
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-note"><strong>MATHEMATICS WITHOUT LIMITS</strong><p>개념을 탐구하고, 나만의 문제를 만들고, 새로운 관점을 공유하세요.</p></div>
+  <div class="account-footer">
+    <div class="account-avatar" aria-hidden="true">{{ current_user.display_name[:1] }}</div>
+    <div class="account-details"><div class="account-name">{{ current_user.display_name }}</div><div class="account-role">{{ '관리자' if current_user.role == 'admin' else '사용자' }}</div></div>
+    {% if current_user.role == 'admin' %}<a class="account-link" href="{{ url_for('admin_users') }}">계정별 데이터 관리</a>{% endif %}
+    <form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button type="submit">로그아웃</button></form>
+  </div>
+</aside>
