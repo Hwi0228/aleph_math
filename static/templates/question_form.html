@@ -298,30 +298,20 @@
     </main>
   </div>
 
-  <script type="importmap">
-  {
-    "imports": {
-      "@tiptap/core": "https://esm.sh/@tiptap/core@3.30.3"
-    }
-  }
-  </script>
-
   <script type="module">
     const form = document.getElementById("question-form");
     const sources = Array.from(document.querySelectorAll("[data-source]"));
     const editors = new Map();
 
     try {
-      const [{ Editor }, { default: StarterKit }, { default: Underline }, { Mathematics, migrateMathStrings }] = await Promise.all([
-        import("https://esm.sh/@tiptap/core@3.30.3"),
-        import("https://esm.sh/@tiptap/starter-kit@3.30.3?external=@tiptap/core"),
-        import("https://esm.sh/@tiptap/extension-underline@3.30.3?external=@tiptap/core"),
-        import("https://esm.sh/@tiptap/extension-mathematics@3.30.3?external=@tiptap/core")
+      const [{ Editor }, { default: StarterKit }, { Mathematics, migrateMathStrings }] = await Promise.all([
+        import("https://cdn.jsdelivr.net/npm/@tiptap/core@3.30.3/+esm"),
+        import("https://cdn.jsdelivr.net/npm/@tiptap/starter-kit@3.30.3/+esm"),
+        import("https://cdn.jsdelivr.net/npm/@tiptap/extension-mathematics@3.30.3/+esm")
       ]);
 
       const extensions = [
         StarterKit,
-        Underline,
         Mathematics.configure({ katexOptions: { throwOnError: false } })
       ];
 

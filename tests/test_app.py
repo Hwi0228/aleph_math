@@ -873,25 +873,30 @@ class EditorFrontendRegressionTests(unittest.TestCase):
             stylesheet,
         )
 
-    def test_tiptap_external_core_import_is_resolved_before_module_execution(self):
+    def test_tiptap_uses_direct_jsdelivr_esm_modules_without_bare_imports(self):
         template = (
             Path(__file__).resolve().parents[1]
             / "static"
             / "templates"
             / "question_form.html"
         ).read_text(encoding="utf-8")
-        import_map_tag = '<script type="importmap">'
-        module_tag = '<script type="module">'
-        self.assertIn(import_map_tag, template)
-        self.assertLess(template.index(import_map_tag), template.index(module_tag))
+        self.assertNotIn("type=\"importmap\"", template)
+        for package in ("core", "starter-kit", "extension-mathematics"):
+            self.assertIn(
+                f"https://cdn.jsdelivr.net/npm/@tiptap/{package}@3.30.3/+esm",
+                template,
+            )
+        self.assertNotIn("external=@tiptap/core", template)
+        self.assertNotIn("https://esm.sh/@tiptap/", template)
 
-        import_map_json = template.split(import_map_tag, 1)[1].split(
-            "</script>", 1
-        )[0]
-        import_map = json.loads(import_map_json)
-        self.assertEqual(
-            import_map["imports"]["@tiptap/core"],
-            "https://esm.sh/@tiptap/core@3.30.3",
-        )
-        self.assertIn("?external=@tiptap/core", template)
+    def test_tiptap_starter_kit_is_not_duplicated_with_underline_extension(self):
+        template = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "templates"
+            / "question_form.html"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("@tiptap/extension-underline", template)
+        self.assertIn("StarterKit,", template)
+        self.assertIn("toggleUnderline()", template)
 
