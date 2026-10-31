@@ -588,7 +588,7 @@ class QuestionRegistrationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("학년을(를) 입력해 주세요.".encode(), response.data)
-        self.assertIn("답을(를) 입력해 주세요.".encode(), response.data)
+        self.assertIn("정답을 입력해 주세요.".encode(), response.data)
         connection = sqlite3.connect(self.database)
         try:
             self.assertEqual(
