@@ -5,25 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f7f8">
   <title>문제 수정 이력 | ALEPH MATH</title>
-  <style>
-    :root{font-family:Pretendard,"Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#292d32;background:#f6f7f8;--line:#eceef0;--blue:#3183f6}
-    *{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh}.app{display:grid;grid-template-columns:172px minmax(0,1fr);min-height:100vh}
-    main{min-width:0;width:min(1050px,100%);margin:0 auto;padding:28px 24px}.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 17px}
-    h1{margin:0;color:#293744;font-size:20px}.sub{margin-top:6px;color:#89939d;font-size:10px}.actions{display:flex;flex-wrap:wrap;gap:7px}
-    .button{display:inline-flex;min-height:32px;align-items:center;justify-content:center;padding:0 11px;border:1px solid #e3e8ed;border-radius:8px;background:#fff;color:#46525e;font-size:10px;font-weight:750;text-decoration:none;cursor:pointer}
-    .button.primary{border-color:var(--blue);background:var(--blue);color:#fff}
-    .notice{margin:0 0 13px;padding:10px 12px;border-radius:8px;background:#eef7f1;color:#3d7552;font-size:10px}
-    .panel{margin-bottom:13px;padding:17px;border:1px solid var(--line);border-radius:12px;background:#fff}.panel h2{margin:0 0 12px;font-size:13px}
-    .compare-form{display:flex;flex-wrap:wrap;align-items:end;gap:8px}.compare-form label{display:grid;gap:5px;color:#7f8993;font-size:10px}
-    .compare-form select{min-height:32px;min-width:105px;padding:0 8px;border:1px solid #e5e9ed;border-radius:8px;background:#fff;font:inherit;font-size:10px}
-    .change{display:grid;grid-template-columns:105px minmax(0,1fr) minmax(0,1fr);gap:9px;padding:10px 0;border-top:1px solid #f0f2f4}
-    .change strong{font-size:10px;color:#697683}.value{min-width:0;min-height:34px;padding:9px;border-radius:8px;background:#fafbfc;color:#5d6873;font-size:10px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
-    .value.before{background:#fff6f5;color:#8d5e5a}.value.after{background:#f1f8f3;color:#4c7357}
-    .revision{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 0;border-top:1px solid #f0f2f4}
-    .revision:first-of-type{border-top:0}.rev-no{color:#397cb8;font-weight:800;font-size:11px}.rev-summary{font-size:11px;color:#3f4b56}.rev-meta{margin-top:4px;color:#929ba4;font-size:9px}
-    .restore-form{margin:0}.empty{color:#929ba4;font-size:11px;line-height:1.7}
-    @media(max-width:760px){.app{grid-template-columns:54px minmax(0,1fr)}main{padding:18px 12px}.change{grid-template-columns:1fr}.revision{grid-template-columns:38px minmax(0,1fr)}.revision .actions{grid-column:2}}
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-question_history.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
@@ -57,7 +39,7 @@
           <button class="button" type="submit">변경 비교</button>
         </form>
         {% if comparison %}
-        <div style="margin-top:14px">
+        <div class="history-comparison-list">
           {% for item in comparison %}
           <div class="history-change"><strong>{{ item.field }}</strong><div class="value before">{{ item.before or "내용 없음" }}</div><div class="value after">{{ item.after or "내용 없음" }}</div></div>
           {% endfor %}

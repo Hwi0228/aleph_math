@@ -7,3 +7,5 @@
 .processing-log li.done::before { background: #5D9870; }
 .processing-log li.active::before { background: var(--aleph-primary); }
 .processing-log li.error::before { background: #BC6262; }
+
+.imported-choices { list-style: none; padding-left: 0; }

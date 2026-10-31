@@ -2,3 +2,5 @@
 .history-panel { margin-bottom: 14px; padding: 18px; border: 1px solid var(--aleph-border); border-radius: var(--aleph-radius-md); background: #fff; box-shadow: var(--aleph-shadow); }
 .history-change { border-top-color: #EDF1F5; }
 .history-revision { border-top-color: #EDF1F5; }
+
+.history-comparison-list { margin-top: 14px; }

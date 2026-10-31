@@ -6,106 +6,14 @@
   <meta name="theme-color" content="#F4F7FA">
   <title>{{ '문항 수정' if mode == 'edit' else '문항 작성' }} | ALEPH MATH</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-question_form.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
-  <style>
-    :root {
-      color-scheme: light;
-      font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #24364B;
-      background: #F4F7FA;
-      --primary: #356A9A;
-      --primary-dark: #285477;
-      --primary-soft: #EAF1F8;
-      --text: #24364B;
-      --muted: #718096;
-      --line: #E3E9EF;
-      --surface: #FFFFFF;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-width: 320px; background: #F4F7FA; }
-    button, input, select, textarea { font: inherit; }
-    .editor-layout { max-width: 980px; margin: 0 auto; padding: 25px 30px 50px; }
-    .editor-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin:0 0 18px; }
-    .eyebrow { margin:0 0 5px; color:var(--muted); font-size:10px; font-weight:750; letter-spacing:.08em; }
-    h1 { margin:0; color:var(--text); font-size:25px; letter-spacing:-.5px; }
-    .description { margin:7px 0 0; color:var(--muted); font-size:12px; line-height:1.65; }
-    .question-id { display:grid; gap:3px; min-width:130px; padding:11px 14px; border:1px solid var(--line); border-radius:11px; background:#fff; text-align:right; }
-    .question-id span { color:var(--muted); font-size:10px; }
-    .question-id strong { color:var(--primary-dark); font-family:ui-monospace,monospace; font-size:17px; letter-spacing:.07em; }
-    .notice { margin:0 0 16px; padding:11px 14px; border:1px solid #D8E6F2; border-radius:10px; background:#EFF5FA; color:#496987; font-size:12px; line-height:1.65; }
-    .notice.success { border-color:#CFE7D6; background:#F0F8F2; color:#39744A; }
-    .notice.warning { border-color:#F0D9B8; background:#FFF8EE; color:#8A642E; }
-    .errors { margin:0 0 16px; padding:11px 14px 11px 32px; border:1px solid #F0CDCD; border-radius:10px; background:#FFF2F2; color:#A33D3D; font-size:12px; line-height:1.7; }
-    .editor-form { display:grid; gap:14px; }
-    .form-section { min-width:0; padding:20px 22px; border:1px solid var(--line); border-radius:13px; background:#fff; box-shadow:0 2px 7px #24364B05; }
-    .section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 16px; }
-    .section-heading h2 { margin:0; color:var(--text); font-size:15px; font-weight:750; }
-    .section-hint { color:var(--muted); font-size:11px; }
-    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 16px; }
-    .field { display:grid; align-content:start; gap:6px; min-width:0; color:#43566B; font-size:12px; font-weight:650; }
-    .field.full { grid-column:1/-1; }
-    .field small { color:var(--muted); font-size:10px; font-weight:400; line-height:1.55; }
-    input, select, textarea {
-      width:100%; min-width:0; min-height:39px; padding:9px 11px;
-      border:1px solid #DCE4EC; border-radius:8px; background:#fff;
-      color:var(--text); font-size:12px;
-    }
-    textarea { min-height:75px; resize:vertical; line-height:1.65; }
-    input:focus, select:focus, textarea:focus, button:focus-visible { outline:2px solid #9CBBD7; outline-offset:2px; border-color:#86AACA; }
-    .required { color:#B55252; }
-    .rich-field { display:grid; gap:0; overflow:hidden; border:1px solid #DCE4EC; border-radius:10px; background:#fff; }
-    .rich-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:4px; padding:7px 8px; border-bottom:1px solid #E8EDF2; background:#F8FAFC; }
-    .tool-button { display:inline-flex; min-width:29px; height:28px; align-items:center; justify-content:center; padding:0 7px; border:1px solid transparent; border-radius:6px; background:transparent; color:#526477; font-size:12px; font-weight:700; cursor:pointer; }
-    .tool-button:hover, .tool-button.is-active { border-color:#D7E4EF; background:#EAF1F8; color:#285477; }
-    .tool-divider { width:1px; height:18px; margin:0 3px; background:#DCE4EC; }
-    .rich-editor { min-height:130px; padding:14px 15px; color:#24364B; font-size:13px; line-height:1.8; outline:none; }
-    .rich-editor.answer-editor { min-height:88px; }
-    .rich-editor.explanation-editor { min-height:150px; }
-    .rich-editor p { margin:0 0 8px; }
-    .rich-editor ul, .rich-editor ol { padding-left:24px; }
-    .rich-editor [data-type="block-math"] { margin:12px 0; padding:9px; overflow-x:auto; border-radius:7px; background:#F8FAFC; text-align:center; }
-    .rich-editor .tiptap-mathematics-render { max-width:100%; }
-    .rich-source { width:100%; min-height:125px; border:0; border-radius:0; resize:vertical; }
-    .rich-source.answer-source { min-height:80px; }
-    .rich-source.explanation-source { min-height:145px; }
-    .js-editor-ready .rich-source { display:none; }
-    .js-editor-ready .rich-editor { display:block; }
-    .rich-editor { display:none; }
-    .rich-source { display:block; }
-    .math-help { padding:7px 11px; border-top:1px solid #EFF2F5; color:#8593A1; font-size:10px; }
-    .standard-box { display:grid; gap:7px; padding:12px 13px; border:1px solid #D8E6F2; border-radius:9px; background:#F2F7FB; }
-    .standard-box label { color:#526E89; font-size:11px; font-weight:700; }
-    .standard-box textarea { min-height:70px; border-color:#D8E6F2; background:#fff; }
-    .standard-status { color:#718096; font-size:10px; font-weight:400; }
-    .source-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px 15px; }
-    .actions { display:flex; align-items:center; justify-content:flex-end; gap:9px; padding:4px 0 0; }
-    .button { display:inline-flex; min-height:39px; align-items:center; justify-content:center; gap:7px; padding:0 16px; border:1px solid #DCE4EC; border-radius:9px; background:#fff; color:#526477; font-size:12px; font-weight:700; text-decoration:none; cursor:pointer; }
-    .button:hover { background:#F8FAFC; }
-    .button.primary { border-color:var(--primary); background:var(--primary); color:#fff; }
-    .button.primary:hover { background:var(--primary-dark); }
-    .button.draft { border-color:#AFC5D9; color:var(--primary-dark); }
-    .draft-meta { margin-right:auto; color:var(--muted); font-size:10px; }
-    .choice-help { color:#718096; font-size:10px; font-weight:400; }
-    @media (max-width:760px) {
-      .editor-layout { padding:18px 13px 36px; }
-      .form-section { padding:16px; }
-      .editor-heading { align-items:flex-start; }
-      h1 { font-size:21px; }
-    }
-    @media (max-width:540px) {
-      .fields, .source-grid { grid-template-columns:1fr; }
-      .field.full { grid-column:auto; }
-      .question-id { min-width:100px; padding:9px; }
-      .actions { flex-wrap:wrap; }
-      .draft-meta { flex-basis:100%; }
-      .actions .button { flex:1; }
-    }
-  </style>
-</head>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/question-editor.css') }}">
+  </head>
 <body>
   <div class="app app-standard">
     {% include "partials/sidebar.html" %}
@@ -141,7 +49,7 @@
         {% if draft_conflict %}
           <div class="notice warning" role="alert">
             이 초안을 저장한 이후 다른 사용자가 공개 문항을 수정했습니다. 초안은 유지되지만 최종 저장은 최신 버전을 다시 확인해야 합니다.
-            <div style="margin-top:9px"><a class="button" href="{{ url_for('edit_question', question_id=question.id, discard_draft=1) }}">초안 버리고 최신 버전 불러오기</a></div>
+            <div class="draft-conflict-actions"><a class="button" href="{{ url_for('edit_question', question_id=question.id, discard_draft=1) }}">초안 버리고 최신 버전 불러오기</a></div>
           </div>
         {% endif %}
         {% if errors %}
@@ -371,7 +279,7 @@
               </label>
             </div>
             {% if mode == 'edit' %}
-              <label class="field" style="margin-top:14px">수정 요약 <small>최종 저장 시 수정 이력에 표시됩니다.</small>
+              <label class="field revision-summary-field">수정 요약 <small>최종 저장 시 수정 이력에 표시됩니다.</small>
                 <input name="summary" maxlength="200" value="{{ form_data.get('summary', '') }}" placeholder="예: 문제 본문과 해설 수정">
               </label>
             {% endif %}
