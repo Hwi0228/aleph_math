@@ -31,8 +31,9 @@ app.config["SESSION_COOKIE_SECURE"] = (
 )
 
 NAV_ITEMS = [
-    {"icon": "⇧", "label": "문제 DB 등록", "endpoint": "new_question"},
+    {"icon": "⌂", "label": "대시보드", "endpoint": "dashboard"},
     {"icon": "▤", "label": "문제 DB", "endpoint": "main"},
+    {"icon": "＋", "label": "문제 등록", "endpoint": "new_question"},
 ]
 
 SUBJECTS = ["수학", "과학", "국어", "영어", "사회", "기타"]
@@ -540,7 +541,7 @@ def render_question_form(form_data=None, errors=None, status=200):
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if g.user is not None:
-        return redirect(url_for("main"))
+        return redirect(url_for("dashboard"))
     if request.method == "GET":
         return render_account_form("signup")
 
@@ -613,13 +614,13 @@ def signup():
 
     session.clear()
     session["user_uuid"] = user_uuid
-    return redirect(url_for("main"))
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if g.user is not None:
-        return redirect(url_for("main"))
+        return redirect(url_for("dashboard"))
     if request.method == "GET":
         return render_account_form("login")
 
@@ -652,7 +653,7 @@ def login():
         and "\\" not in destination
     ):
         return redirect(destination)
-    return redirect(url_for("main"))
+    return redirect(url_for("dashboard"))
 
 
 @app.post("/logout")
@@ -663,6 +664,73 @@ def logout():
 
 
 @app.route("/")
+@login_required
+def dashboard():
+    connection = get_db()
+    user_uuid = g.user["uuid"]
+
+    summary = connection.execute(
+        """
+        SELECT
+            COUNT(*) AS question_count,
+            COUNT(DISTINCT subject) AS subject_count,
+            COUNT(DISTINCT CASE
+                WHEN unit <> '' THEN subject || '|' || grade || '|' || unit
+            END) AS unit_count
+        FROM questions
+        WHERE user_uuid = ?
+        """,
+        (user_uuid,),
+    ).fetchone()
+    folder_count = connection.execute(
+        "SELECT COUNT(*) FROM folders WHERE user_uuid = ?",
+        (user_uuid,),
+    ).fetchone()[0]
+
+    subject_stats = connection.execute(
+        """
+        SELECT subject, COUNT(*) AS count
+        FROM questions
+        WHERE user_uuid = ?
+        GROUP BY subject
+        ORDER BY count DESC, subject COLLATE NOCASE
+        """,
+        (user_uuid,),
+    ).fetchall()
+
+    recent_questions = connection.execute(
+        """
+        SELECT id, subject, grade, unit, passage, prompt, examples,
+               choices, source, year, page
+        FROM questions
+        WHERE user_uuid = ?
+        ORDER BY id DESC
+        LIMIT 6
+        """,
+        (user_uuid,),
+    ).fetchall()
+    questions = []
+    for row in recent_questions:
+        question = dict(row)
+        try:
+            question["choices"] = json.loads(question["choices"] or "[]")
+        except (TypeError, json.JSONDecodeError):
+            question["choices"] = []
+        questions.append(question)
+
+    return render_template(
+        "dashboard.html",
+        question_count=summary["question_count"],
+        subject_count=summary["subject_count"],
+        unit_count=summary["unit_count"],
+        folder_count=folder_count,
+        subject_stats=subject_stats,
+        recent_questions=questions,
+        nav_items=NAV_ITEMS,
+    )
+
+
+@app.route("/questions")
 @login_required
 def main():
     return render_template("main.html", **get_question_page_data())
