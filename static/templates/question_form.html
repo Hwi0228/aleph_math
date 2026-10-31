@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f7f8">
-  <title>문제 등록 | Aleph Math</title>
+  <title>{{ '문제 편집' if mode == 'edit' else '문제 등록' }} | ALEPH MATH</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
   <style>
     :root {
@@ -69,11 +69,15 @@
     {% include "partials/sidebar.html" %}
     <main>
       {% set header_section = "QUESTION EDITOR" %}
-      {% set header_title = "새 문제 제작" %}
-      {% set header_description = "교과 정보와 지문, 수식, 보기 및 정답을 입력하세요." %}
+      {% set header_title = "공개 문제 편집" if mode == "edit" else "새 문제 제작" %}
+      {% set header_description = "모든 회원이 함께 관리하는 공개 문항입니다. 수정 내용은 버전 이력에 기록됩니다." %}
       {% include "partials/header.html" %}
-      <form class="form-card" method="post" action="{{ url_for('new_question') }}">
+      <form class="form-card" method="post" action="{{ url_for('edit_question', question_id=question.id) if mode == 'edit' else url_for('new_question') }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        {% if mode == "edit" %}<input type="hidden" name="base_revision" value="{{ base_revision }}">{% endif %}
+        <p class="hint" style="margin:0 0 16px;padding:11px 13px;border-radius:9px;background:#f1f7fc;color:#52718d;line-height:1.7">
+          {% if mode == "edit" %}이 문항은 모든 회원이 편집할 수 있습니다. 변경 요약과 수정 내용은 버전 이력에 기록됩니다.{% else %}등록한 문제는 모든 회원에게 공개됩니다. 외부 자료는 재배포 및 수정 권한이 있는 문항만 등록해 주세요.{% endif %}
+        </p>
         {% if errors %}
         <ul class="errors" role="alert">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
         {% endif %}
@@ -92,14 +96,14 @@
           <label class="field full">단원
             <input name="unit" maxlength="200" value="{{ form_data.get('unit', '') }}" required>
           </label>
-          <label class="field full">폴더 <span class="hint">선택 사항</span>
+          {% if mode != "edit" %}<label class="field full">폴더 <span class="hint">선택 사항</span>
             <select name="folder_uuid">
               <option value="">폴더 미지정</option>
               {% for folder in folder_options %}
               <option value="{{ folder.uuid }}"{% if form_data.get('folder_uuid') == folder.uuid %} selected{% endif %}>{% for _ in range(folder.depth) %}　{% endfor %}{{ folder.name }}</option>
               {% endfor %}
             </select>
-          </label>
+          </label>{% endif %}
           <label class="field full">지문 <span class="hint">선택 사항 · 수식은 $...$, \(...\), $$...$$ 또는 \[...\]로 입력</span>
             <textarea name="passage" maxlength="10000" data-math-input="passage-preview">{{ form_data.get('passage', '') }}</textarea>
             <output class="preview" id="passage-preview" aria-live="polite"></output>
@@ -120,6 +124,10 @@
             <textarea name="answer" maxlength="2000" data-math-input="answer-preview" required>{{ form_data.get('answer', '') }}</textarea>
             <output class="preview" id="answer-preview" aria-live="polite"></output>
           </label>
+          <label class="field full">해설 <span class="hint">선택 사항</span>
+            <textarea name="explanation" maxlength="10000" data-math-input="explanation-preview">{{ form_data.get('explanation', '') }}</textarea>
+            <output class="preview" id="explanation-preview" aria-live="polite"></output>
+          </label>
           <label class="field full">출처
             <input name="source" maxlength="300" value="{{ form_data.get('source', '') }}" required>
           </label>
@@ -130,9 +138,14 @@
             <input name="page" type="number" min="1" max="10000" value="{{ form_data.get('page', '') }}">
           </label>
         </div>
+        {% if mode == "edit" %}
+        <label class="field" style="margin-top:18px">수정 요약 <span class="hint">변경 이력에 기록됩니다.</span>
+          <input name="summary" maxlength="200" placeholder="예: 지문 오탈자 및 선택지 수정">
+        </label>
+        {% endif %}
         <div class="actions">
-          <a class="button" href="{{ url_for('main') }}">취소</a>
-          <button class="button primary" type="submit">문제 저장</button>
+          <a class="button" href="{{ url_for('main') if mode != 'edit' else url_for('question_history', question_id=question.id) }}">취소</a>
+          <button class="button primary" type="submit">{{ "수정 저장 · 새 버전 만들기" if mode == "edit" else "문제 저장 · 전체 공개" }}</button>
         </div>
       </form>
     </main>

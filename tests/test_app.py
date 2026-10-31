@@ -190,7 +190,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(login_response.headers["Location"], "/")
         self.assertEqual(client.get("/").status_code, 200)
 
-    def test_admin_can_browse_user_data_but_user_cannot_browse_another_account(self):
+    def test_all_questions_are_visible_to_members_and_admin_can_filter_by_author(self):
         user_client = app.test_client()
         self.register(user_client, "user@example.com", "사용자")
         user_uuid = self.get_user_uuid("user@example.com")
@@ -199,17 +199,28 @@ class QuestionRegistrationTests(unittest.TestCase):
             "/questions/new",
             data=self.valid_question(prompt="사용자 소유 문제"),
         )
+        self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(prompt="관리자 소유 문제"),
+        )
+
+        public_response = self.client.get("/questions")
+        member_response = user_client.get("/questions")
+        self.assertIn("사용자 소유 문제".encode(), public_response.data)
+        self.assertIn("관리자 소유 문제".encode(), public_response.data)
+        self.assertIn("사용자 소유 문제".encode(), member_response.data)
+        self.assertIn("관리자 소유 문제".encode(), member_response.data)
 
         admin_response = self.client.get("/admin/users")
         self.assertEqual(admin_response.status_code, 200)
         self.assertIn(f"/questions?user_uuid={user_uuid}".encode(), admin_response.data)
-        user_question_response = self.client.get(f"/questions?user_uuid={user_uuid}")
-        self.assertIn("사용자 소유 문제".encode(), user_question_response.data)
+        admin_filter_response = self.client.get(f"/questions?user_uuid={user_uuid}")
+        self.assertIn("사용자 소유 문제".encode(), admin_filter_response.data)
+        self.assertNotIn("관리자 소유 문제".encode(), admin_filter_response.data)
 
-        forbidden_response = user_client.get(f"/questions?user_uuid={self.admin_uuid}")
-        self.assertEqual(forbidden_response.status_code, 403)
+        self.assertEqual(user_client.get(f"/questions?user_uuid={self.admin_uuid}").status_code, 403)
         self.assertEqual(user_client.get("/admin/users").status_code, 403)
-        self.assertNotIn("관리자 소유 문제".encode(), user_client.get("/questions").data)
 
     def test_empty_database_shows_no_fake_questions_or_count(self):
         response = self.client.get("/questions")
@@ -565,6 +576,140 @@ class QuestionRegistrationTests(unittest.TestCase):
             ).fetchone()[0]
         finally:
             connection.close()
+
+    def test_any_member_can_edit_a_public_question_and_restore_a_revision(self):
+        self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(prompt="관리자 원본 문제"),
+        )
+        question_id = self.query_one("SELECT id FROM questions LIMIT 1")
+
+        editor = app.test_client()
+        self.register(editor, "wiki-editor@example.com", "위키 편집자")
+        self.assertIn("관리자 원본 문제".encode(), editor.get("/questions").data)
+
+        edit_page = editor.get(f"/questions/{question_id}/edit")
+        self.assertEqual(edit_page.status_code, 200)
+        self.assertIn(b'name="base_revision" value="1"', edit_page.data)
+
+        form = self.valid_question(
+            prompt="다른 회원이 수정한 문제",
+            explanation="수정한 해설",
+        )
+        form["base_revision"] = "1"
+        form["summary"] = "문제 문구와 해설 보완"
+        response = self.csrf_post(editor, f"/questions/{question_id}/edit", data=form)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(f"/questions/{question_id}/history", response.headers["Location"])
+
+        connection = sqlite3.connect(self.database)
+        try:
+            row = connection.execute(
+                "SELECT user_uuid, prompt, explanation FROM questions WHERE id = ?",
+                (question_id,),
+            ).fetchone()
+            revisions = connection.execute(
+                "SELECT revision_number, summary FROM question_revisions "
+                "WHERE question_id = ? ORDER BY revision_number",
+                (question_id,),
+            ).fetchall()
+        finally:
+            connection.close()
+        self.assertEqual(row[0], self.admin_uuid)
+        self.assertEqual(row[1:], ("다른 회원이 수정한 문제", "수정한 해설"))
+        self.assertEqual(revisions, [
+            (1, "최초 등록"),
+            (2, "문제 문구와 해설 보완"),
+        ])
+
+        history = editor.get(f"/questions/{question_id}/history")
+        self.assertEqual(history.status_code, 200)
+        self.assertIn("위키 편집자".encode(), history.data)
+        self.assertIn("변경 비교".encode(), history.data)
+
+        self.csrf_post(self.client, f"/questions/{question_id}/restore/1")
+        connection = sqlite3.connect(self.database)
+        try:
+            prompt = connection.execute(
+                "SELECT prompt FROM questions WHERE id = ?", (question_id,)
+            ).fetchone()[0]
+            count = connection.execute(
+                "SELECT COUNT(*) FROM question_revisions WHERE question_id = ?",
+                (question_id,),
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        self.assertEqual(prompt, "관리자 원본 문제")
+        self.assertEqual(count, 3)
+
+    def test_stale_question_edit_is_rejected(self):
+        self.csrf_post(self.client, "/questions/new", data=self.valid_question())
+        question_id = self.query_one("SELECT id FROM questions LIMIT 1")
+        self.client.get(f"/questions/{question_id}/edit")
+
+        first = self.valid_question(prompt="첫 번째 편집")
+        first["base_revision"] = "1"
+        self.csrf_post(self.client, f"/questions/{question_id}/edit", data=first)
+
+        stale = self.valid_question(prompt="이전 화면에서 덮어쓰기")
+        stale["base_revision"] = "1"
+        response = self.csrf_post(self.client, f"/questions/{question_id}/edit", data=stale)
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("다른 사용자가 먼저 수정했습니다.".encode(), response.data)
+        self.assertEqual(
+            self.query_one("SELECT prompt FROM questions WHERE id = ?", (question_id,)),
+            "첫 번째 편집",
+        )
+
+    def test_existing_question_rows_are_not_migrated_for_public_wiki(self):
+        connection = sqlite3.connect(self.database)
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO questions (
+                    user_uuid, subject, grade, unit, prompt, answer, source
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.admin_uuid,
+                    "수학",
+                    "고2",
+                    "미분",
+                    "기존 DB에 있던 문제",
+                    "정답",
+                    "기존 출처",
+                ),
+            )
+            question_id = cursor.lastrowid
+            connection.commit()
+            initial_revision_count = connection.execute(
+                "SELECT COUNT(*) FROM question_revisions"
+            ).fetchone()[0]
+        finally:
+            connection.close()
+
+        self.assertEqual(initial_revision_count, 0)
+        history = self.client.get(f"/questions/{question_id}/history")
+        self.assertEqual(history.status_code, 200)
+        self.assertIn("이력 추적 시작".encode(), history.data)
+        self.assertEqual(
+            self.query_one("SELECT COUNT(*) FROM questions"),
+            1,
+        )
+        self.assertEqual(
+            self.query_one(
+                "SELECT COUNT(*) FROM question_revisions WHERE question_id = ?",
+                (question_id,),
+            ),
+            1,
+        )
+        self.assertEqual(
+            self.query_one("SELECT prompt FROM questions WHERE id = ?", (question_id,)),
+            "기존 DB에 있던 문제",
+        )
+
 
 
 if __name__ == "__main__":

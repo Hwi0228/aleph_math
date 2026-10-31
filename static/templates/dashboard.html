@@ -380,9 +380,9 @@
           <article class="stat-card">
             <div class="stat-icon" aria-hidden="true">▤</div>
             <div>
-              <div class="stat-label">등록한 문제</div>
+              <div class="stat-label">공개된 문제</div>
               <div class="stat-value">{{ "{:,}".format(question_count) }}</div>
-              <div class="stat-caption">내 문제 은행에 저장된 문항</div>
+              <div class="stat-caption">모든 회원이 이용할 수 있는 문항</div>
             </div>
           </article>
           <article class="stat-card">
@@ -409,7 +409,7 @@
               <div class="panel-heading">
                 <div>
                   <h2 class="panel-title" id="recent-title">최근 등록 문제</h2>
-                  <div class="panel-subtitle">MY QUESTION BANK · QUESTION PREVIEW</div>
+                  <div class="panel-subtitle">PUBLIC QUESTION BANK · QUESTION PREVIEW</div>
                 </div>
                 <a class="text-link" href="{{ url_for('main') }}">문제 DB 전체 보기 →</a>
               </div>
