@@ -458,10 +458,9 @@
                   <div class="question-tags">
                     <span class="tag subject">{{ question.subject }}</span>
                     {% if question.grade %}<span class="tag">{{ question.grade }}</span>{% endif %}
-                    {% if question.unit %}<span class="tag">{{ question.unit }}</span>{% endif %}
                   </div>
                   <h3 class="question-title">
-                    {% if question.passage %}{{ question.passage | striptags | truncate(56, True, '…') }}{% else %}{{ question.prompt | striptags | truncate(56, True, '…') }}{% endif %}
+                    {% if question.unit %}{{ question.unit }}{% else %}문제 #{{ question.id }}{% endif %}
                   </h3>
                   <div class="question-meta">
                     {% if question.year %}{{ question.year }}년{% endif %}
