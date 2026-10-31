@@ -6,7 +6,6 @@ from flask import Flask
 
 from auth import register_auth_routes
 from hwp_routes import register_hwp_routes
-from ocr_routes import register_ocr_routes
 from question_routes import register_question_routes
 
 
@@ -27,7 +26,6 @@ def _secret_key(app):
 def create_app():
     app = Flask(__name__, template_folder="static/templates")
     app.config["DATABASE"] = os.path.join(app.instance_path, "probocr.sqlite3")
-    app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024
     app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY")
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -39,7 +37,6 @@ def create_app():
 
     register_auth_routes(app)
     register_question_routes(app)
-    register_ocr_routes(app)
     register_hwp_routes(app)
     return app
 
