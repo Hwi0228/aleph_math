@@ -854,3 +854,44 @@ class QuestionRegistrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EditorFrontendRegressionTests(unittest.TestCase):
+    def test_standard_workspace_uses_a_grid_for_the_sidebar_column(self):
+        stylesheet = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "styles"
+            / "layout.css"
+        ).read_text(encoding="utf-8")
+        self.assertRegex(
+            stylesheet,
+            r"\.app\.app-standard\s*\{[^}]*display:\s*grid\s*;",
+        )
+        self.assertIn(
+            "grid-template-columns: 224px minmax(0, 1fr)",
+            stylesheet,
+        )
+
+    def test_tiptap_external_core_import_is_resolved_before_module_execution(self):
+        template = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "templates"
+            / "question_form.html"
+        ).read_text(encoding="utf-8")
+        import_map_tag = '<script type="importmap">'
+        module_tag = '<script type="module">'
+        self.assertIn(import_map_tag, template)
+        self.assertLess(template.index(import_map_tag), template.index(module_tag))
+
+        import_map_json = template.split(import_map_tag, 1)[1].split(
+            "</script>", 1
+        )[0]
+        import_map = json.loads(import_map_json)
+        self.assertEqual(
+            import_map["imports"]["@tiptap/core"],
+            "https://esm.sh/@tiptap/core@3.30.3",
+        )
+        self.assertIn("?external=@tiptap/core", template)
+
