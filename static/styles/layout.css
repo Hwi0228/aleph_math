@@ -1,4 +1,4 @@
-.app.app-standard { grid-template-columns: 224px minmax(0, 1fr) !important; min-height: 100vh; }
+.app.app-standard { display: grid; grid-template-columns: 224px minmax(0, 1fr) !important; min-height: 100vh; }
 .app.app-standard > .sidebar { position: sticky; top: 0; display: flex; height: 100vh; min-height: 580px; flex-direction: column; padding: 22px 14px 16px !important; border-right: 1px solid var(--aleph-border) !important; background: #fff !important; }
 .app.app-question-bank { grid-template-columns: 224px 246px minmax(400px, 1fr) 246px !important; min-height: 100vh; }
 .app.app-question-bank > .sidebar { position: sticky; top: 0; height: 100vh; }
