@@ -224,7 +224,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         response = self.client.get("/questions")
         sidebar = response.data.split(b'<aside class="sidebar"', 1)[1].split(b"</aside>", 1)[0]
 
-        self.assertIn("문제 제작".encode(), sidebar)
+        self.assertIn("문제 등록".encode(), sidebar)
         self.assertIn("문제 DB".encode(), sidebar)
         for unused_item in ("홈", "문제 상점", "문제지", "AI 변형문제", "출처 분석", "학생 관리", "설정"):
             self.assertNotIn(unused_item.encode(), sidebar)
