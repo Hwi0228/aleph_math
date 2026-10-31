@@ -1,0 +1,20 @@
+:root {
+  --aleph-primary: #356A9A;
+  --aleph-primary-dark: #285477;
+  --aleph-primary-soft: #EAF1F8;
+  --aleph-bg: #F4F7FA;
+  --aleph-surface: #FFFFFF;
+  --aleph-text: #24364B;
+  --aleph-muted: #718096;
+  --aleph-border: #E3E9EF;
+  --aleph-border-strong: #CDD8E3;
+  --aleph-danger: #A84949;
+  --aleph-danger-soft: #FFF2F2;
+  --aleph-success: #39744A;
+  --aleph-success-soft: #F0F8F2;
+  --aleph-radius-sm: 8px;
+  --aleph-radius-md: 11px;
+  --aleph-radius-lg: 14px;
+  --aleph-shadow: 0 2px 8px rgba(36, 54, 75, .045);
+  --aleph-font: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}

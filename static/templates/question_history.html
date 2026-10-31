@@ -25,17 +25,22 @@
     @media(max-width:760px){.app{grid-template-columns:54px minmax(0,1fr)}main{padding:18px 12px}.change{grid-template-columns:1fr}.revision{grid-template-columns:38px minmax(0,1fr)}.revision .actions{grid-column:2}}
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/history.css') }}">
 </head>
 <body>
   <div class="app app-standard">
     {% include "partials/sidebar.html" %}
-    <main>
+    <main class="history-main">
       {% set header_section = "PUBLIC QUESTION · HISTORY" %}
       {% set header_title = "문제 수정 이력" %}
       {% set header_description = "모든 편집 내용과 편집자를 버전별로 기록합니다." %}
       {% include "partials/header.html" %}
-      <section class="top">
-        <div><h1>{{ question.grade }} · {{ question.unit }}</h1><div class="sub">{{ question.subject }} · {{ question.source }} · 원작성자 {{ question.author_name or "탈퇴한 사용자" }}</div></div>
+      <section class="history-top">
+        <div><h1>{{ question.grade }} · {{ question.unit }}</h1><div class="sub">문항 {{ question_number }} · {{ question.subject }} · {{ question.source }} · 원작성자 {{ question.author_name or "탈퇴한 사용자" }}</div></div>
         <div class="actions">
           <a class="button" href="{{ url_for('main', subject=question.subject) }}">문제 DB</a>
           <a class="button primary" href="{{ url_for('edit_question', question_id=question.id) }}">문제 편집</a>
@@ -43,7 +48,7 @@
       </section>
       {% if saved %}<div class="notice" role="status">수정 내용을 새 버전으로 저장했습니다.</div>{% endif %}
       {% if restored %}<div class="notice" role="status">선택한 버전을 새 버전으로 복원했습니다. 기존 이력은 보존됩니다.</div>{% endif %}
-      <section class="panel">
+      <section class="history-panel">
         <h2>버전 비교</h2>
         {% if revisions|length >= 2 %}
         <form class="compare-form" method="get" action="{{ url_for('question_history', question_id=question.id) }}">
@@ -54,16 +59,16 @@
         {% if comparison %}
         <div style="margin-top:14px">
           {% for item in comparison %}
-          <div class="change"><strong>{{ item.field }}</strong><div class="value before">{{ item.before or "내용 없음" }}</div><div class="value after">{{ item.after or "내용 없음" }}</div></div>
+          <div class="history-change"><strong>{{ item.field }}</strong><div class="value before">{{ item.before or "내용 없음" }}</div><div class="value after">{{ item.after or "내용 없음" }}</div></div>
           {% endfor %}
         </div>
         {% else %}<p class="empty">선택한 두 버전 사이에 변경된 항목이 없습니다.</p>{% endif %}
         {% else %}<p class="empty">아직 비교할 이전 버전이 없습니다. 첫 수정이 이루어지면 변경 비교를 사용할 수 있습니다.</p>{% endif %}
       </section>
-      <section class="panel">
+      <section class="history-panel">
         <h2>전체 이력 · {{ revisions|length }}개 버전</h2>
         {% for revision in revisions %}
-        <div class="revision">
+        <div class="history-revision">
           <div class="rev-no">v{{ revision.revision_number }}</div>
           <div><div class="rev-summary">{{ revision.summary }}</div><div class="rev-meta">{{ revision.editor_name or "탈퇴한 사용자" }} · {{ revision.created_at }}</div></div>
           {% if revision.revision_number != latest_revision %}

@@ -1,0 +1,5 @@
+.dashboard-main { background: var(--aleph-bg); }
+.dashboard-main .panel { border: 1px solid var(--aleph-border); border-radius: 12px; background: #fff; box-shadow: var(--aleph-shadow); }
+.dashboard-main .metric-card { border-color: var(--aleph-border); border-radius: 11px; background: #fff; }
+.dashboard-main .quick-action-icon { border-radius: 9px; background: var(--aleph-primary-soft); color: var(--aleph-primary); }
+.dashboard-main .text-link, .dashboard-main .quick-action strong { color: var(--aleph-primary); }

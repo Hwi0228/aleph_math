@@ -342,6 +342,17 @@
     .question-folder-form select { flex: 1; }
     .question-folder-form button { padding: 0 9px; }
     .math-content { white-space: pre-wrap; }
+    .question-id-tag { background:#EAF1F8; color:#285477; font-family:ui-monospace,monospace; letter-spacing:.04em; }
+    .question-card-title { margin:9px 0 4px; color:#24364B; font-size:13px; font-weight:750; }
+    .question-more { margin-top:8px; border-top:1px solid #F0F1F2; padding-top:7px; }
+    .question-more > summary { color:#718096; font-size:10px; font-weight:700; cursor:pointer; }
+    .question-more-content { padding-top:7px; }
+    .question-note-form { display:grid; gap:6px; margin:0 0 8px; padding:8px; border:1px solid #E3E9EF; border-radius:8px; background:#F8FAFC; }
+    .question-note-form label { color:#526477; font-size:10px; font-weight:700; }
+    .question-note-form textarea { width:100%; min-height:58px; padding:7px; border:1px solid #DCE4EC; border-radius:7px; background:#fff; color:#35465A; font:inherit; font-size:10px; resize:vertical; }
+    .question-note-form button { justify-self:end; min-height:27px; padding:0 10px; border:0; border-radius:7px; background:#356A9A; color:#fff; font-size:10px; font-weight:700; cursor:pointer; }
+
+
     .card-field { margin-bottom: 7px; }
     .card-field-label { display: block; margin-bottom: 2px; color: #858c93; font-size: 9px; font-weight: 700; }
     .card-answer { padding: 5px 7px; border-radius: 7px; background: #f1f8f4; color: #33794f; }
@@ -430,6 +441,11 @@
     }
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/question-bank.css') }}">
 </head>
 <body>
   {% macro render_folder(folder) %}
@@ -508,6 +524,7 @@
           <article class="question-card">
             <div class="card-top">
               <input class="question-check" type="checkbox" aria-label="문제 선택">
+              <span class="tag question-id-tag">{{ question.display_id }}</span>
               <span class="tag subject">{{ question.subject }}</span>
               {% if question.grade %}<span class="tag">{{ question.grade }}</span>{% endif %}
               {% if question.unit %}<span class="tag">{{ question.unit }}</span>{% endif %}
@@ -515,16 +532,17 @@
               <button class="detail-button" type="button" aria-expanded="false">자세히</button>
             </div>
             <div class="question-content">
-              {% if question.passage %}<div class="card-field math-content">{{ question.passage }}</div>{% endif %}
-              {% if question.examples %}<div class="card-field"><span class="card-field-label">보기</span><div class="math-content">{{ question.examples }}</div></div>{% endif %}
-              <p class="math-content">{{ question.prompt }}</p>
+              {% if question.title %}<h3 class="question-card-title">{{ question.title }}</h3>{% endif %}
+              {% if question.passage %}<div class="card-field math-content">{{ question.passage|safe }}</div>{% endif %}
+              {% if question.examples %}<div class="card-field"><span class="card-field-label">보기</span><div class="math-content">{{ question.examples|safe }}</div></div>{% endif %}
+              <div class="math-content">{{ question.prompt|safe }}</div>
               <div class="choices">
                 {% for choice in question.choices %}
-                <div class="choice math-content"><span class="choice-number">{{ '①②③④⑤'[loop.index0] if loop.index0 < 5 else loop.index ~ '.' }}</span>{{ choice }}</div>
+                <div class="choice math-content"><span class="choice-number">{{ '①②③④⑤'[loop.index0] if loop.index0 < 5 else loop.index ~ '.' }}</span>{{ choice|safe }}</div>
                 {% endfor %}
               </div>
-              {% if question.answer %}<div class="card-field card-answer"><span class="card-field-label">답</span><div class="math-content">{{ question.answer }}</div></div>{% endif %}
-              {% if question.explanation %}<details class="card-field"><summary class="card-field-label">해설 보기</summary><div class="math-content">{{ question.explanation }}</div></details>{% endif %}
+              {% if question.answer %}<div class="card-field card-answer"><span class="card-field-label">답</span><div class="math-content">{{ question.answer|safe }}</div></div>{% endif %}
+              {% if question.explanation %}<details class="card-field"><summary class="card-field-label">해설 보기</summary><div class="math-content">{{ question.explanation|safe }}</div></details>{% endif %}
             </div>
             {% if question.year or question.page or question.source %}
             <div class="card-meta">
@@ -540,7 +558,17 @@
               <a class="detail-button" href="{{ url_for('edit_question', question_id=question.id) }}">편집</a>
               <a class="detail-button" href="{{ url_for('question_history', question_id=question.id) }}">수정 이력</a>
             </div>
-            {% if question.can_manage_folder %}<form class="question-folder-form" method="post" action="{{ url_for('move_question', question_id=question.id) }}">
+            <details class="question-more">
+              <summary>문제 더보기</summary>
+              <div class="question-more-content">
+              <form class="question-note-form" method="post" action="{{ url_for('save_question_note', question_id=question.id) }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="subject" value="{{ selected_subject }}">
+                <label for="personal-note-{{ question.id }}">내 개인 메모</label>
+                <textarea id="personal-note-{{ question.id }}" name="personal_note" maxlength="5000" placeholder="나에게만 보이는 문항 메모">{{ question.personal_note }}</textarea>
+                <button type="submit">메모 저장</button>
+              </form>
+              {% if question.can_manage_folder %}<form class="question-folder-form" method="post" action="{{ url_for('move_question', question_id=question.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="subject" value="{{ selected_subject }}">
               {% if selected_folder_uuid %}<input type="hidden" name="current_folder" value="{{ selected_folder_uuid }}">{% endif %}
@@ -552,6 +580,8 @@
               </select>
               <button type="submit">이동</button>
             </form>{% endif %}
+              </div>
+            </details>
           </article>
           {% else %}
           <p class="empty-state">표시할 문제가 없습니다.</p>

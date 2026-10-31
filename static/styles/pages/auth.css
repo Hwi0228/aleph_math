@@ -1,0 +1,13 @@
+body.auth-page { display: grid; min-height: 100vh; margin: 0; place-items: center; padding: 24px; background: radial-gradient(circle at top left, #EAF1F8 0, transparent 42%), var(--aleph-bg); }
+.auth-page .auth-shell { width: min(100%, 430px); padding: 30px; border: 1px solid var(--aleph-border); border-radius: 16px; background: #fff; box-shadow: 0 14px 38px rgba(36,54,75,.08); }
+.auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 25px; color: var(--aleph-text); font-size: 13px; font-weight: 850; letter-spacing: -.2px; }
+.auth-brand-mark { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 10px; background: var(--aleph-primary); color: #fff; font: 26px Georgia, serif; }
+.auth-page .auth-shell h1 { font-size: 22px; font-weight: 800; letter-spacing: -.45px; }
+.auth-page .auth-shell .description { color: var(--aleph-muted); font-size: 12px; line-height: 1.7; }
+.auth-page .auth-shell label { color: #43566B; font-size: 11px; }
+.auth-page .auth-shell input { min-height: 42px; border-color: var(--aleph-border-strong); border-radius: 9px; }
+.auth-page .auth-shell button { min-height: 42px; background: var(--aleph-primary); font-size: 12px; }
+.auth-page .auth-shell button:hover { background: var(--aleph-primary-dark); }
+.auth-page .auth-shell .switch { color: var(--aleph-muted); font-size: 11px; }
+.auth-page .auth-shell a { color: var(--aleph-primary); }
+@media(max-width:480px){.auth-page{padding:14px}.auth-page .auth-shell{padding:23px}}

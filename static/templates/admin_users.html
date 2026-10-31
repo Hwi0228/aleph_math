@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#F4F7FA">
   <title>계정별 데이터 관리 | ALEPH MATH</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
   <style>
     :root { font-family:"Pretendard","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#24364B; background:#F4F7FA; }
     * { box-sizing:border-box; }
@@ -19,6 +18,11 @@
     .empty { grid-column:1/-1; padding:35px; border:1px dashed #D8E1E9; border-radius:10px; color:#8491A0; text-align:center; font-size:12px; }
     @media(max-width:600px) { .user-list { grid-template-columns:1fr; } }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
 </head>
 <body>
   <div class="app app-standard">

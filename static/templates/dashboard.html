@@ -359,6 +359,11 @@
     }
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/dashboard.css') }}">
 </head>
 <body>
   <div class="app app-standard">
@@ -423,7 +428,7 @@
                     {% if question.grade %}<span class="tag">{{ question.grade }}</span>{% endif %}
                   </div>
                   <h3 class="question-title">
-                    {% if question.unit %}{{ question.unit }}{% else %}문제 #{{ question.id }}{% endif %}
+                    {% if question.title %}{{ question.title }}{% elif question.unit %}{{ question.unit }}{% else %}문항 {{ question.display_id }}{% endif %}
                   </h3>
                   <div class="question-meta">
                     {% if question.year %}{{ question.year }}년{% endif %}
@@ -432,11 +437,11 @@
                   </div>
                   <div class="question-preview">
                     {% if question.passage %}
-                    <div class="preview-block"><span class="preview-label">지문</span>{{ question.passage }}</div>
+                    <div class="preview-block"><span class="preview-label">지문</span>{{ question.passage|safe }}</div>
                     {% endif %}
-                    <div class="preview-block"><span class="preview-label">문제</span>{{ question.prompt }}</div>
+                    <div class="preview-block"><span class="preview-label">문제</span>{{ question.prompt|safe }}</div>
                     {% if question.examples %}
-                    <div class="preview-block"><span class="preview-label">보기</span>{{ question.examples }}</div>
+                    <div class="preview-block"><span class="preview-label">보기</span>{{ question.examples|safe }}</div>
                     {% endif %}
                     {% if question.choices %}
                     <div class="question-choices">
@@ -447,7 +452,7 @@
                     {% endif %}
                   </div>
                   <div class="question-footer">
-                    <span>문항 #{{ question.id }}</span>
+                    <span>문항 {{ question.display_id }}</span>
                     <a href="{{ url_for('main', subject=question.subject) }}">문제 DB에서 보기 ↗</a>
                   </div>
                 </article>
@@ -469,7 +474,7 @@
             <section class="panel">
               <div class="panel-heading">
                 <div>
-                  <h2 class="panel-title">빠른 시작</h2>
+                  <h2 class="panel-title">바로가기</h2>
                   <div class="panel-subtitle">QUICK ACTIONS</div>
                 </div>
               </div>

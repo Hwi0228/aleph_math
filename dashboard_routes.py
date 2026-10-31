@@ -5,6 +5,7 @@ from flask import g, render_template
 from auth import login_required
 from constants import NAV_ITEMS
 from database import get_db
+from question_routes import format_question_number, render_rich_html
 
 
 def dashboard():
@@ -38,7 +39,7 @@ def dashboard():
 
     recent_questions = connection.execute(
         """
-        SELECT id, subject, grade, unit, passage, prompt, examples,
+        SELECT id, title, subject, grade, unit, passage, prompt, examples,
                choices, source, year, page
         FROM questions
         ORDER BY id DESC
@@ -52,6 +53,9 @@ def dashboard():
             question["choices"] = json.loads(question["choices"] or "[]")
         except (TypeError, json.JSONDecodeError):
             question["choices"] = []
+        question["display_id"] = format_question_number(question["id"])
+        for field in ("passage", "prompt", "examples"):
+            question[field] = render_rich_html(question[field])
         questions.append(question)
 
     return render_template(

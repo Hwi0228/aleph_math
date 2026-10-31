@@ -1,0 +1,9 @@
+.hwp-main { width: min(100%, 1080px); margin: 0 auto; }
+.hwp-main .card { border: 1px solid var(--aleph-border); border-radius: 12px; background: #fff; box-shadow: var(--aleph-shadow); }
+.hwp-main .button.primary { border-color: var(--aleph-primary); background: var(--aleph-primary); }
+.processing-log { display: grid; gap: 6px; margin: 14px 0 0; padding: 12px 14px; border: 1px solid var(--aleph-border); border-radius: 9px; background: #F8FAFC; color: #627489; font-size: 11px; list-style: none; }
+.processing-log li { display: flex; align-items: center; gap: 8px; }
+.processing-log li::before { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #B6C2CF; content: ""; }
+.processing-log li.done::before { background: #5D9870; }
+.processing-log li.active::before { background: var(--aleph-primary); }
+.processing-log li.error::before { background: #BC6262; }

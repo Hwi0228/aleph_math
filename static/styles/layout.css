@@ -1,0 +1,51 @@
+.app.app-standard { grid-template-columns: 224px minmax(0, 1fr) !important; min-height: 100vh; }
+.app.app-standard > .sidebar { position: sticky; top: 0; display: flex; height: 100vh; min-height: 580px; flex-direction: column; padding: 22px 14px 16px !important; border-right: 1px solid var(--aleph-border) !important; background: #fff !important; }
+.app.app-question-bank { grid-template-columns: 224px 246px minmax(400px, 1fr) 246px !important; min-height: 100vh; }
+.app.app-question-bank > .sidebar { position: sticky; top: 0; height: 100vh; }
+.app main { min-width: 0; }
+.app-standard main { padding: 28px clamp(18px, 3vw, 42px); }
+.app-standard main > .site-header { width: min(100%, 1080px); margin-right: auto; margin-left: auto; }
+.site-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 22px; padding: 0 0 17px; border-bottom: 1px solid var(--aleph-border); }
+.site-header-copy { min-width: 0; }
+.site-breadcrumb { margin-bottom: 7px; color: #98A4B0; font-size: 9px; font-weight: 750; letter-spacing: .08em; }
+.site-header h1 { margin: 0; color: var(--aleph-text); font-size: 21px; font-weight: 800; letter-spacing: -.4px; }
+.site-header p { margin: 6px 0 0; color: var(--aleph-muted); font-size: 11px; line-height: 1.6; }
+.site-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.site-button { display: inline-flex; min-height: 35px; align-items: center; justify-content: center; padding: 0 12px; border: 1px solid var(--aleph-border); border-radius: var(--aleph-radius-sm); background: #fff; color: #526276; font-size: 10px; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.site-button.primary { border-color: var(--aleph-primary); background: var(--aleph-primary); color: #fff; }
+.sidebar .brand { display: flex !important; height: auto !important; align-items: center; gap: 10px !important; padding: 0 7px 24px !important; color: var(--aleph-text) !important; font-size: 14px !important; font-weight: 800 !important; }
+.sidebar .brand-mark { display: grid !important; width: 34px !important; height: 34px !important; flex: 0 0 34px; place-items: center; border: 0 !important; border-radius: 10px !important; background: var(--aleph-primary) !important; color: #fff !important; font: 25px Georgia, serif !important; }
+.sidebar .nav-label { margin: 12px 9px 7px !important; color: #98A5B2 !important; font-size: 10px !important; font-weight: 800; letter-spacing: .08em; }
+.sidebar .nav-section { display: grid; gap: 4px !important; }
+.sidebar .nav-link { display: flex !important; min-height: 40px !important; align-items: center; gap: 10px !important; padding: 0 10px !important; border: 0 !important; border-radius: 9px !important; background: transparent !important; color: #586779 !important; font-size: 12px !important; font-weight: 600 !important; text-decoration: none; }
+.sidebar .nav-link:hover { background: #F5F8FB !important; color: var(--aleph-text) !important; }
+.sidebar .nav-link.active { background: var(--aleph-primary-soft) !important; color: var(--aleph-primary) !important; font-weight: 750 !important; }
+.sidebar .account-footer { border-top-color: var(--aleph-border) !important; }
+@media (max-width: 1120px) {
+  .app.app-question-bank { grid-template-columns: 64px 220px minmax(360px, 1fr) 220px !important; }
+}
+@media (max-width: 860px) {
+  .app.app-question-bank { grid-template-columns: 58px 200px minmax(340px, 1fr) !important; }
+  .app.app-question-bank .settings { display: none; }
+}
+@media (max-width: 760px) {
+  .app.app-standard { grid-template-columns: 68px minmax(0, 1fr) !important; }
+  .app.app-standard > .sidebar { align-items: center; height: 100vh; min-height: 0; padding-right: 6px !important; padding-left: 6px !important; }
+  .app.app-standard .brand { justify-content: center; width: 100%; padding-right: 0 !important; padding-left: 0 !important; font-size: 0 !important; }
+  .app.app-standard .sidebar .nav-label, .app.app-standard .sidebar-note, .app.app-standard .nav-link .nav-label-text, .app.app-standard .account-details, .app.app-standard .account-link, .app.app-standard .account-footer form { display: none !important; }
+  .app.app-standard .nav-link { width: 46px; justify-content: center; padding: 0 !important; }
+  .app.app-standard .account-footer { display: flex !important; justify-content: center; padding-top: 12px !important; }
+  .site-header { flex-wrap: wrap; }
+}
+@media (max-width: 640px) {
+  .app.app-question-bank { display: flex !important; height: 100dvh; min-height: 520px; }
+  .app.app-question-bank > .sidebar { width: 54px; flex: 0 0 54px; }
+  .app.app-question-bank .filter-panel { display: none; }
+  .app.app-question-bank .results { flex: 1; min-width: 0; }
+  .app-standard main { padding: 18px 13px 32px; }
+}
+@media (max-width: 520px) {
+  .site-header { align-items: flex-start; flex-direction: column; }
+  .site-header-actions { width: 100%; }
+  .site-button { flex: 1; }
+}
