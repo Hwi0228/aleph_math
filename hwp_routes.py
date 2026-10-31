@@ -1,6 +1,4 @@
-import io
 import json
-import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -10,6 +8,7 @@ from auth import login_required
 from constants import NAV_ITEMS, SUBJECTS
 from database import get_db
 from parse_hwp import parse_questions_from_xml, strip_choice_label
+from parse_rhwp import MAX_DOCUMENT_BYTES, parse_questions_from_rhwp_bytes
 
 
 MAX_SECTION_XML_SIZE = 16 * 1024 * 1024
@@ -146,32 +145,13 @@ def _render_page(questions=None, result_json=None, error=None, form_data=None):
 
 
 def _get_section_xml(filename: str, content: bytes) -> bytes:
-    extension = Path(filename).suffix.lower()
-    if extension == ".xml":
-        xml_content = content
-    elif extension == ".hwpx":
-        try:
-            with zipfile.ZipFile(io.BytesIO(content)) as archive:
-                try:
-                    section = archive.getinfo("Contents/section0.xml")
-                except KeyError as exc:
-                    raise ValueError(
-                        "HWPX 안에서 Contents/section0.xml을 찾을 수 없습니다."
-                    ) from exc
-                if section.file_size > MAX_SECTION_XML_SIZE:
-                    raise ValueError("문서의 XML 크기가 허용 한도(16MB)를 초과합니다.")
-                with archive.open(section) as section_file:
-                    xml_content = section_file.read(MAX_SECTION_XML_SIZE + 1)
-        except zipfile.BadZipFile as exc:
-            raise ValueError("올바른 HWPX 파일이 아닙니다.") from exc
-    else:
-        raise ValueError("HWPX 또는 section0.xml 파일만 업로드할 수 있습니다.")
-
-    if not xml_content:
+    if Path(filename).suffix.lower() != ".xml":
+        raise ValueError("단독 HWPML XML 파일만 이 경로에서 처리할 수 있습니다.")
+    if not content:
         raise ValueError("파싱할 XML 내용이 비어 있습니다.")
-    if len(xml_content) > MAX_SECTION_XML_SIZE:
+    if len(content) > MAX_SECTION_XML_SIZE:
         raise ValueError("XML 크기가 허용 한도(16MB)를 초과합니다.")
-    return xml_content
+    return content
 
 
 def hwp_parser_page():
@@ -232,21 +212,31 @@ def hwp_parser_page():
 
         uploaded = request.files.get("document")
         if uploaded is None or not uploaded.filename:
-            error = "파싱할 HWPX 또는 section0.xml 파일을 선택해 주세요."
+            error = "파싱할 HWP, HWPX 또는 section0.xml 파일을 선택해 주세요."
         else:
             try:
-                xml_content = _get_section_xml(uploaded.filename, uploaded.read())
-                questions = parse_questions_from_xml(xml_content)
-                if not questions:
-                    error = "문항을 찾지 못했습니다. HWPML section0.xml인지 확인해 주세요."
-                    questions = None
-                else:
-                    result_json = json.dumps(
-                        {"questions": questions},
-                        ensure_ascii=False,
-                        indent=2,
+                content = uploaded.read(MAX_DOCUMENT_BYTES + 1)
+                if len(content) > MAX_DOCUMENT_BYTES:
+                    raise ValueError("문서 크기가 허용 한도(12MB)를 초과합니다.")
+
+                extension = Path(uploaded.filename).suffix.lower()
+                if extension in {".hwp", ".hwpx"}:
+                    questions = parse_questions_from_rhwp_bytes(
+                        content,
+                        filename=Path(uploaded.filename).name,
                     )
-            except (ValueError, ET.ParseError) as exc:
+                elif extension == ".xml":
+                    xml_content = _get_section_xml(uploaded.filename, content)
+                    questions = parse_questions_from_xml(xml_content)
+                else:
+                    raise ValueError("HWP, HWPX 또는 HWPML section0.xml 파일만 업로드할 수 있습니다.")
+
+                result_json = json.dumps(
+                    {"questions": questions},
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            except (ValueError, RuntimeError, ET.ParseError) as exc:
                 error = str(exc)
 
     return _render_page(questions=questions, result_json=result_json, error=error)

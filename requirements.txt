@@ -1,2 +1,3 @@
 Flask>=3.0,<4.0
 hml-equation-parser==1.0.12
+rhwp-python==0.8.1

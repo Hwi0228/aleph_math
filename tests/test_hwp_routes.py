@@ -3,8 +3,8 @@ import json
 import sqlite3
 import tempfile
 import unittest
-import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 from app import app
 
@@ -67,7 +67,7 @@ class HwpParserRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("HWP 파싱".encode(), response.data)
         self.assertIn(b'name="document"', response.data)
-        self.assertIn(b'accept=".hwpx,.xml,application/xml,text/xml"', response.data)
+        self.assertIn(b'accept=".hwp,.hwpx,.xml,application/xml,text/xml"', response.data)
         self.assertIn(b'href="/hwp"', self.client.get("/").data)
 
     def test_existing_question_data_survives_explanation_column_migration(self):
@@ -170,23 +170,50 @@ class HwpParserRouteTests(unittest.TestCase):
         self.assertIn("더하면 $1+1$".encode(), response.data)
         self.assertIn("JSON 다운로드".encode(), response.data)
 
-    def test_uploading_hwpx_parses_section_without_extracting_files(self):
-        package = io.BytesIO()
-        with zipfile.ZipFile(package, "w") as archive:
-            archive.writestr("Contents/section0.xml", SAMPLE_XML)
-
-        response = self.client.post(
-            "/hwp",
-            data={
-                "_csrf_token": self.csrf_token(),
-                "document": (io.BytesIO(package.getvalue()), "exam.hwpx"),
-            },
-            content_type="multipart/form-data",
-        )
+    def test_uploading_hwpx_uses_rhwp_parser(self):
+        parsed = [{
+            "number": 1,
+            "question": "문제 본문",
+            "choices": ["하나", "둘"],
+            "answer": "②",
+            "explanation": "풀이 $1+1$",
+        }]
+        with patch("hwp_routes.parse_questions_from_rhwp_bytes", return_value=parsed) as parser:
+            response = self.client.post(
+                "/hwp",
+                data={
+                    "_csrf_token": self.csrf_token(),
+                    "document": (io.BytesIO(b"hwpx bytes"), "exam.hwpx"),
+                },
+                content_type="multipart/form-data",
+            )
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("추출 결과 · 1문항".encode(), response.data)
         self.assertIn("문제 본문".encode(), response.data)
+        parser.assert_called_once()
+
+    def test_uploading_hwp_uses_rhwp_parser(self):
+        parsed = [{
+            "number": 1,
+            "question": "HWP 문제 본문",
+            "choices": [],
+            "answer": "①",
+            "explanation": "",
+        }]
+        with patch("hwp_routes.parse_questions_from_rhwp_bytes", return_value=parsed) as parser:
+            response = self.client.post(
+                "/hwp",
+                data={
+                    "_csrf_token": self.csrf_token(),
+                    "document": (io.BytesIO(b"hwp bytes"), "exam.hwp"),
+                },
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("HWP 문제 본문".encode(), response.data)
+        parser.assert_called_once()
 
     def test_selected_parsed_questions_are_saved_with_shared_metadata(self):
         questions_json = json.dumps(
@@ -300,8 +327,8 @@ class HwpParserRouteTests(unittest.TestCase):
 
     def test_invalid_uploads_show_an_error(self):
         for filename, content, expected in (
-            ("exam.hwp", b"not supported", "HWPX 또는 section0.xml"),
-            ("exam.hwpx", b"not a zip", "올바른 HWPX 파일이 아닙니다."),
+            ("exam.hwp", b"not supported", "rhwp-python이 문서를 해석하지 못했습니다"),
+            ("exam.hwpx", b"not a zip", "rhwp-python이 문서를 해석하지 못했습니다"),
             ("exam.xml", b"<not-closed>", "no element found"),
         ):
             with self.subTest(filename=filename):
