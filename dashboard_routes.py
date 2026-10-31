@@ -69,6 +69,7 @@ def dashboard():
         subject_stats=subject_stats,
         recent_questions=questions,
         nav_items=NAV_ITEMS,
+        active_page="dashboard",
     )
 
 

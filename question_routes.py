@@ -186,7 +186,9 @@ def render_question_form(form_data=None, errors=None, status=200):
     )
 
 def main():
-    return render_template("main.html", **get_question_page_data())
+    return render_template(
+        "main.html", **get_question_page_data(), active_page="main"
+    )
 
 def admin_users():
     users = get_db().execute(
@@ -199,7 +201,12 @@ def admin_users():
         ORDER BY users.created_at, users.email
         """
     ).fetchall()
-    return render_template("admin_users.html", users=users)
+    return render_template(
+        "admin_users.html",
+        users=users,
+        nav_items=NAV_ITEMS,
+        active_page="admin_users",
+    )
 
 def new_folder():
     name = request.form.get("name", "").strip()
