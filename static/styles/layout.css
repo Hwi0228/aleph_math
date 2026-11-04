@@ -1,26 +1,26 @@
 .app.app-standard { display: grid; grid-template-columns: 224px minmax(0, 1fr) !important; min-height: 100vh; }
-.app.app-standard > .sidebar { position: sticky; top: 0; display: flex; height: 100vh; min-height: 580px; flex-direction: column; padding: 22px 14px 16px !important; border-right: 1px solid var(--aleph-border) !important; background: #fff !important; }
+.app.app-standard > .sidebar { position: sticky; top: 0; display: flex; height: 100vh; min-height: 580px; flex-direction: column; padding: 22px 14px 16px !important; border-right: 1px solid var(--hexora-border) !important; background: #fff !important; }
 .app.app-question-bank { grid-template-columns: 224px 246px minmax(400px, 1fr) 246px !important; min-height: 100vh; }
 .app.app-question-bank > .sidebar { position: sticky; top: 0; height: 100vh; }
 .app main { min-width: 0; }
 .app-standard main { padding: 28px clamp(18px, 3vw, 42px); }
 .app-standard main > .site-header { width: min(100%, 1080px); margin-right: auto; margin-left: auto; }
-.site-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 22px; padding: 0 0 17px; border-bottom: 1px solid var(--aleph-border); }
+.site-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 22px; padding: 0 0 17px; border-bottom: 1px solid var(--hexora-border); }
 .site-header-copy { min-width: 0; }
 .site-breadcrumb { margin-bottom: 7px; color: #98A4B0; font-size: 9px; font-weight: 750; letter-spacing: .08em; }
-.site-header h1 { margin: 0; color: var(--aleph-text); font-size: 21px; font-weight: 800; letter-spacing: -.4px; }
-.site-header p { margin: 6px 0 0; color: var(--aleph-muted); font-size: 11px; line-height: 1.6; }
+.site-header h1 { margin: 0; color: var(--hexora-text); font-size: 21px; font-weight: 800; letter-spacing: -.4px; }
+.site-header p { margin: 6px 0 0; color: var(--hexora-muted); font-size: 11px; line-height: 1.6; }
 .site-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
-.site-button { display: inline-flex; min-height: 35px; align-items: center; justify-content: center; padding: 0 12px; border: 1px solid var(--aleph-border); border-radius: var(--aleph-radius-sm); background: #fff; color: #526276; font-size: 10px; font-weight: 750; text-decoration: none; white-space: nowrap; }
-.site-button.primary { border-color: var(--aleph-primary); background: var(--aleph-primary); color: #fff; }
-.sidebar .brand { display: flex !important; height: auto !important; align-items: center; gap: 10px !important; padding: 0 7px 24px !important; color: var(--aleph-text) !important; font-size: 14px !important; font-weight: 800 !important; }
-.sidebar .brand-mark { display: grid !important; width: 34px !important; height: 34px !important; flex: 0 0 34px; place-items: center; border: 0 !important; border-radius: 10px !important; background: var(--aleph-primary) !important; color: #fff !important; font: 25px Georgia, serif !important; }
+.site-button { display: inline-flex; min-height: 35px; align-items: center; justify-content: center; padding: 0 12px; border: 1px solid var(--hexora-border); border-radius: var(--hexora-radius-sm); background: #fff; color: #526276; font-size: 10px; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.site-button.primary { border-color: var(--hexora-primary); background: var(--hexora-primary); color: #fff; }
+.sidebar .brand { display: flex !important; height: auto !important; align-items: center; gap: 10px !important; padding: 0 7px 24px !important; color: var(--hexora-text) !important; font-size: 14px !important; font-weight: 800 !important; }
+.sidebar .brand-mark { display: grid !important; width: 34px !important; height: 34px !important; flex: 0 0 34px; place-items: center; border: 0 !important; border-radius: 10px !important; background: var(--hexora-primary) !important; color: #fff !important; font: 23px "Segoe UI Symbol", "Noto Sans Symbols 2", serif !important; }
 .sidebar .nav-label { margin: 12px 9px 7px !important; color: #98A5B2 !important; font-size: 10px !important; font-weight: 800; letter-spacing: .08em; }
 .sidebar .nav-section { display: grid; gap: 4px !important; }
 .sidebar .nav-link { display: flex !important; min-height: 40px !important; align-items: center; gap: 10px !important; padding: 0 10px !important; border: 0 !important; border-radius: 9px !important; background: transparent !important; color: #586779 !important; font-size: 12px !important; font-weight: 600 !important; text-decoration: none; }
-.sidebar .nav-link:hover { background: #F5F8FB !important; color: var(--aleph-text) !important; }
-.sidebar .nav-link.active { background: var(--aleph-primary-soft) !important; color: var(--aleph-primary) !important; font-weight: 750 !important; }
-.sidebar .account-footer { border-top-color: var(--aleph-border) !important; }
+.sidebar .nav-link:hover { background: #F5F8FB !important; color: var(--hexora-text) !important; }
+.sidebar .nav-link.active { background: var(--hexora-primary-soft) !important; color: var(--hexora-primary) !important; font-weight: 750 !important; }
+.sidebar .account-footer { border-top-color: var(--hexora-border) !important; }
 @media (max-width: 1120px) {
   .app.app-question-bank { grid-template-columns: 64px 220px minmax(360px, 1fr) 220px !important; }
 }
@@ -48,4 +48,8 @@
   .site-header { align-items: flex-start; flex-direction: column; }
   .site-header-actions { width: 100%; }
   .site-button { flex: 1; }
+}
+
+@media (max-width: 760px) {
+  .app.app-standard .brand-lockup { display: none !important; }
 }
