@@ -54,3 +54,8 @@ python app.py
 Flask 진입점은 `app.py`이며, DB, 인증, 문제/폴더, HWP 파싱은 각각 `database.py`, `auth.py`, `question_routes.py`, `hwp_routes.py`에 있습니다.
 
 > 본 제품은 한글과컴퓨터의글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
+
+
+## 버전 관리
+
+현재 버전은 `0.1.0`입니다. 기존 개발 이력은 기준 버전 `0.0.0`으로 간주하고, 이 버전부터 Semantic Versioning을 적용합니다. 기능 단위 변경은 버전별 PR 하나로 관리하며, 각 PR은 `VERSION`과 `CHANGELOG.md`를 함께 갱신합니다. 기능 추가는 MINOR, 하위 호환 수정은 PATCH, 호환성이 깨지는 변경은 MAJOR 버전을 올립니다.
