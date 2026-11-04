@@ -328,6 +328,47 @@
     try {
       if (!window.Quill) throw new Error("Quill 2 CDN script did not load.");
       const Delta = Quill.import("delta");
+      const InlineEmbed = Quill.import("blots/embed");
+      const BlockEmbed = Quill.import("blots/block/embed");
+      function renderMath(node, latex, displayMode) {
+        node.dataset.latex = latex;
+        node.dataset.mathObject = displayMode ? "block" : "inline";
+        node.setAttribute("contenteditable", "false");
+        node.setAttribute("aria-label", displayMode ? "블록 수식" : "인라인 수식");
+        if (window.katex) {
+          window.katex.render(latex, node, { throwOnError: false, displayMode });
+        } else {
+          node.textContent = latex;
+        }
+      }
+
+      class InlineMathBlot extends InlineEmbed {
+        static blotName = "inlineMath";
+        static tagName = "span";
+        static className = "ql-math-inline";
+        static create(value) {
+          const node = super.create();
+          renderMath(node, String(value || ""), false);
+          return node;
+        }
+        static value(node) { return node.dataset.latex || ""; }
+      }
+
+      class BlockMathBlot extends BlockEmbed {
+        static blotName = "blockMath";
+        static tagName = "div";
+        static className = "ql-math-block";
+        static create(value) {
+          const node = super.create();
+          renderMath(node, String(value || ""), true);
+          return node;
+        }
+        static value(node) { return node.dataset.latex || ""; }
+      }
+
+      Quill.register(InlineMathBlot, true);
+      Quill.register(BlockMathBlot, true);
+
 
       const mathDialog = document.getElementById("math-input-dialog");
       const mathDialogForm = document.getElementById("math-input-form");
@@ -380,17 +421,9 @@
         openMathDialog("", (latex) => {
           quill.focus();
           if (range.length) quill.deleteText(range.index, range.length, "user");
-          const isBlock = format === "blockMath";
-          const value = isBlock
-            ? "\\[\n" + latex + "\n\\]"
-            : "\\(" + latex + "\\)";
-          let insertion = value;
-          if (isBlock) {
-            const before = range.index > 0 && quill.getText(range.index - 1, 1) !== "\n" ? "\n" : "";
-            insertion = before + value + "\n";
-          }
-          quill.insertText(range.index, insertion, "user");
-          quill.setSelection(range.index + insertion.length, 0, "silent");
+          const index = range.index;
+          quill.insertEmbed(index, format, latex, "user");
+          quill.setSelection(index + 1, 0, "silent");
         });
       }
 
@@ -414,27 +447,45 @@
           }
         });
 
-        function legacyMathText(node, displayMode) {
+        function legacyMathEmbed(node, displayMode) {
           const latex = node.getAttribute("data-latex") ||
             node.getAttribute("data-tex") || node.textContent || "";
-          const value = displayMode
-            ? "\\[\n" + latex.trim() + "\n\\]\n"
-            : "\\(" + latex.trim() + "\\)";
-          return new Delta().insert(value);
+          return new Delta().insert(displayMode
+            ? { blockMath: latex.trim() }
+            : { inlineMath: latex.trim() }).concat(
+              displayMode ? new Delta().insert("\\n") : new Delta()
+            );
         }
 
-        // Convert existing TipTap and Quill math objects into ordinary editable text.
-        quill.clipboard.addMatcher('span[data-type="inline-math"]', (node) =>
-          legacyMathText(node, false));
-        quill.clipboard.addMatcher('div[data-type="block-math"]', (node) =>
-          legacyMathText(node, true));
+        // Preserve math as a single object when copying/pasting within Quill.
         quill.clipboard.addMatcher("span.ql-math-inline", (node) =>
-          legacyMathText(node, false));
+          legacyMathEmbed(node, false));
         quill.clipboard.addMatcher("div.ql-math-block", (node) =>
-          legacyMathText(node, true));
+          legacyMathEmbed(node, true));
+
+        // Migrate previously stored TipTap math nodes into native Quill math objects.
+        quill.clipboard.addMatcher('span[data-type="inline-math"]', (node) =>
+          legacyMathEmbed(node, false));
+        quill.clipboard.addMatcher('div[data-type="block-math"]', (node) =>
+          legacyMathEmbed(node, true));
         const initialHtml = source.value.trim();
         if (initialHtml) quill.setContents(quill.clipboard.convert({ html: initialHtml }), "silent");
         quill.on("text-change", () => { source.value = quill.root.innerHTML; });
+
+        mount.addEventListener("dblclick", (event) => {
+          const mathNode = event.target.closest(".ql-math-inline, .ql-math-block");
+          if (!mathNode || !mount.contains(mathNode)) return;
+          const blot = Quill.find(mathNode);
+          if (!blot) return;
+          const index = quill.getIndex(blot);
+          const format = mathNode.classList.contains("ql-math-block") ? "blockMath" : "inlineMath";
+          openMathDialog(mathNode.dataset.latex || "", (nextLatex) => {
+            quill.focus();
+            quill.deleteText(index, 1, "user");
+            quill.insertEmbed(index, format, nextLatex, "user");
+            quill.setSelection(index + 1, 0, "silent");
+          });
+        });
 
         editors.set(key, quill);
       });
@@ -449,7 +500,8 @@
         if (event.submitter && event.submitter.value === "draft") return;
         const missing = ["prompt", "answer"].find((key) => {
           const editor = editors.get(key);
-          return editor && !editor.getText().trim();
+          return editor && !editor.getText().trim() &&
+            !editor.root.querySelector(".ql-math-inline, .ql-math-block");
         });
         if (missing) {
           event.preventDefault();

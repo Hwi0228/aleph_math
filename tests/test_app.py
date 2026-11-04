@@ -879,20 +879,20 @@ class EditorFrontendRegressionTests(unittest.TestCase):
         self.assertIn("if (!window.Quill)", template)
         self.assertIn("new Quill(mount", template)
 
-    def test_quill_math_is_editable_text_and_imports_legacy_math_nodes(self):
+    def test_quill_math_remains_atomic_and_supports_clipboard_roundtrips(self):
         template = (Path(__file__).resolve().parents[1] / "static/templates/question_form.html").read_text(encoding="utf-8")
-        self.assertIn('quill.insertText(range.index, insertion, "user")', template)
-        self.assertIn("const value = isBlock", template)
-        self.assertIn("function legacyMathText(node, displayMode)", template)
-        self.assertIn('span[data-type="inline-math"]', template)
-        self.assertIn('div[data-type="block-math"]', template)
-        self.assertIn("span.ql-math-inline", template)
-        self.assertIn("div.ql-math-block", template)
+        self.assertIn('static blotName = "inlineMath"', template)
+        self.assertIn('static blotName = "blockMath"', template)
+        self.assertIn('node.dataset.latex = latex', template)
+        self.assertIn('node.setAttribute("contenteditable", "false")', template)
+        self.assertIn('quill.insertEmbed(index, format, latex, "user")', template)
+        self.assertIn('quill.clipboard.addMatcher("span.ql-math-inline"', template)
+        self.assertIn('quill.clipboard.addMatcher("div.ql-math-block"', template)
+        self.assertIn('quill.clipboard.addMatcher(\'span[data-type="inline-math"]\'', template)
+        self.assertIn('quill.clipboard.addMatcher(\'div[data-type="block-math"]\'', template)
+        self.assertIn('quill.deleteText(index, 1, "user")', template)
         self.assertIn("quill.clipboard.convert({ html: initialHtml })", template)
-        self.assertNotIn('static blotName = "inlineMath"', template)
-        self.assertNotIn('static blotName = "blockMath"', template)
-        self.assertNotIn("quill.insertEmbed(", template)
-        self.assertNotIn('contenteditable", "false"', template)
+        self.assertNotIn('quill.insertText(range.index, insertion, "user")', template)
 
     def test_quill_writes_html_back_to_form_fields_and_preserves_plain_text_fallback(self):
         root = Path(__file__).resolve().parents[1]
