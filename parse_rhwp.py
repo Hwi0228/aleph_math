@@ -282,8 +282,8 @@ def _paragraphs_from_document(ir: Any) -> list[str]:
 
 
 _QUESTION_START = re.compile(
-    r"^\\s*(?:(?:제\\s*)?(\\d{1,3})\\s*[.)]|"
-    r"(\\d{1,3})\\s*번(?:\\s*[.)])?|Q\\s*(\\d{1,3})\\s*[.:)])\\s*(.*)$",
+    r"^\s*(?:(?:제\s*)?(\d{1,3})\s*[.)]|"
+    r"(\d{1,3})\s*번(?:\s*[.)])?|Q\s*(\d{1,3})\s*[.:)])\s*(.*)$",
     re.IGNORECASE,
 )
 
@@ -302,7 +302,7 @@ def _parse_numbered_paragraphs(paragraphs: list[str]) -> list[dict[str, Any]]:
         if current is None:
             return
         question = _compact(" ".join(current["question_parts"]))
-        question = re.sub(r"\\s*\\[\\s*\\d+\\s*점\\s*\\]\\s*$", "", question).strip()
+        question = re.sub(r"\s*\[\s*\d+\s*점\s*\]\s*$", "", question).strip()
         if not question:
             return
         choices: list[str] = []
@@ -338,8 +338,8 @@ def _parse_numbered_paragraphs(paragraphs: list[str]) -> list[dict[str, Any]]:
         if current is None:
             continue
 
-        answer_match = re.search(r"\\[정답\\]\\s*(.*?)(?=\\[해설\\]|$)", paragraph)
-        explanation_match = re.search(r"\\[해설\\]\\s*(.*)$", paragraph)
+        answer_match = re.search(r"\[정답\]\s*(.*?)(?=\[해설\]|$)", paragraph)
+        explanation_match = re.search(r"\[해설\]\s*(.*)$", paragraph)
         if answer_match or explanation_match:
             if answer_match:
                 current["answer"] = _compact(answer_match.group(1))
