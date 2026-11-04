@@ -73,9 +73,7 @@ class QuestionRegistrationTests(unittest.TestCase):
             "difficulty": "중",
             "question_type": "단답형",
             "license": "ORIGINAL",
-            "passage": "지문 $x^2$",
-            "prompt": "문제 내용 \\(x^2\\)",
-            "examples": "보기 $$x + 1$$",
+            "prompt": "<p>지문 $x^2$</p><p>문제 내용 \\(x^2\\)</p><p>보기 $$x + 1$$</p>",
             "choices": "첫 번째 $x$\n두 번째\n세 번째",
             "answer": "$x = 2$",
             "source": "직접 등록한 출처",
@@ -152,7 +150,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(self.query_one("SELECT COUNT(*) FROM question_revisions WHERE question_id = 1"), 1)
         self.assertEqual(
             self.query_one("SELECT prompt FROM questions WHERE id = 1"),
-            "문제 내용 \\(x^2\\)",
+            "<p>지문 $x^2$</p><p>문제 내용 \\(x^2\\)</p><p>보기 $$x + 1$$</p>",
         )
         self.assertEqual(self.query_one("SELECT COUNT(*) FROM question_drafts"), 1)
 
@@ -384,15 +382,16 @@ class QuestionRegistrationTests(unittest.TestCase):
             "question_type",
             "achievement_standard",
             "title",
-            "passage",
             "prompt",
-            "examples",
             "choices",
             "answer",
             "source",
             "license",
         ):
             self.assertIn(f'name="{field}"'.encode(), form_response.data)
+        self.assertNotIn(b'name="passage"', form_response.data)
+        self.assertNotIn(b'name="examples"', form_response.data)
+        self.assertIn(b'data-editor="prompt"', form_response.data)
         self.assertIn(b'data-editor="answer"', form_response.data)
         self.assertIn("임시 저장".encode(), form_response.data)
         self.assertIn(b"quill@2.0.3", form_response.data)
@@ -531,9 +530,9 @@ class QuestionRegistrationTests(unittest.TestCase):
             "수학",
             "고2",
             "미분",
-            "지문 $x^2$",
-            "문제 내용 \\(x^2\\)",
-            "보기 $$x + 1$$",
+            "",
+            "<p>지문 $x^2$</p><p>문제 내용 \\(x^2\\)</p><p>보기 $$x + 1$$</p>",
+            "",
         ))
         self.assertEqual(json.loads(row[7]), ["첫 번째 $x$", "두 번째", "세 번째"])
         self.assertEqual(row[8:], ("$x = 2$", "직접 등록한 출처", 2026, 12))

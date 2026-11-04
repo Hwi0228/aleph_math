@@ -285,9 +285,9 @@ def _collect_question_data(form):
         "difficulty": form.get("difficulty", "중").strip(),
         "question_type": form.get("question_type", "단답형").strip(),
         "points": None,
-        "passage": sanitize_rich_html(form.get("passage", "")),
+        "passage": "",
         "prompt": sanitize_rich_html(form.get("prompt", "")),
-        "examples": sanitize_rich_html(form.get("examples", "")),
+        "examples": "",
         "choices": [
             sanitize_rich_html(value.strip())
             for value in form.get("choices", "").splitlines()
@@ -330,8 +330,7 @@ def _collect_question_data(form):
     for field, label, maximum in (
         ("title", "문항 제목", 200), ("grade", "학년", 50), ("course", "교과목", 100),
         ("unit", "단원", 200), ("achievement_standard", "성취기준", 4000),
-        ("passage", "지문", 20000), ("prompt", "문제 내용", 20000),
-        ("examples", "보기", 10000), ("answer", "정답", 10000),
+        ("prompt", "문제 내용", 50000), ("answer", "정답", 10000),
         ("explanation", "해설", 20000), ("source", "출처명", 300),
         ("exam", "시험 / 회차", 200), ("original_question_number", "원본 문항 번호", 50),
         ("source_url", "출처 URL", 1000), ("summary", "수정 요약", 200),
@@ -543,7 +542,7 @@ def get_question_page_data():
             render_rich_html(strip_choice_label(choice))
             for choice in json.loads(question["choices"] or "[]")
         ]
-        for field in ("passage", "prompt", "examples", "answer", "explanation"):
+        for field in ("prompt", "answer", "explanation"):
             question[field] = render_rich_html(question[field])
         question["display_id"] = format_question_number(question["id"])
         questions.append(question)

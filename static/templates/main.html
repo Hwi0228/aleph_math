@@ -100,8 +100,6 @@
             </div>
             <div class="question-content">
               {% if question.title %}<h3 class="question-card-title">{{ question.title }}</h3>{% endif %}
-              {% if question.passage %}<div class="card-field math-content">{{ question.passage|safe }}</div>{% endif %}
-              {% if question.examples %}<div class="card-field"><span class="card-field-label">보기</span><div class="math-content">{{ question.examples|safe }}</div></div>{% endif %}
               <div class="math-content">{{ question.prompt|safe }}</div>
               <div class="choices">
                 {% for choice in question.choices %}

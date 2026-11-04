@@ -137,24 +137,6 @@
               <span class="section-hint">서식 · 수식 · 이미지가 포함된 콘텐츠</span>
             </div>
             <div class="fields">
-              <label class="field full">지문 <span class="section-hint">선택 사항</span>
-                <div class="rich-field">
-                  <div class="rich-toolbar" data-toolbar="passage">
-                    <button class="tool-button ql-bold" type="button" aria-label="굵게">B</button>
-                    <button class="tool-button ql-italic" type="button" aria-label="기울임"><i>I</i></button>
-                    <button class="tool-button ql-underline" type="button" aria-label="밑줄"><u>U</u></button>
-                    <span class="tool-divider"></span>
-                    <button class="tool-button ql-list" type="button" value="bullet" aria-label="글머리 목록">☷</button>
-                    <button class="tool-button ql-list" type="button" value="ordered" aria-label="번호 목록">1.</button>
-                    <span class="tool-divider"></span>
-                    <button class="tool-button ql-inlineMath" type="button">∑ 수식</button>
-                    <button class="tool-button ql-blockMath" type="button">∑ 블록</button>
-                  </div>
-                  <div class="rich-editor" data-editor="passage"></div>
-                  <textarea class="rich-source" name="passage" data-source="passage">{{ form_data.get('passage', '') }}</textarea>
-                  <div class="math-help">수식은 일반 텍스트처럼 삽입·선택·수정할 수 있는 LaTeX 문자열로 저장됩니다.</div>
-                </div>
-              </label>
               <label class="field full">문제 내용 <span class="required">*</span>
                 <div class="rich-field">
                   <div class="rich-toolbar" data-toolbar="prompt">
@@ -170,20 +152,7 @@
                   </div>
                   <div class="rich-editor" data-editor="prompt"></div>
                   <textarea class="rich-source" name="prompt" data-source="prompt" required>{{ form_data.get('prompt', '') }}</textarea>
-                  <div class="math-help">수식도 텍스트처럼 글자 단위로 편집할 수 있습니다. 저장 후 문항 화면에서는 수식으로 렌더링됩니다.</div>
-                </div>
-              </label>
-              <label class="field full">보기 <span class="section-hint">선택 사항</span>
-                <div class="rich-field">
-                  <div class="rich-toolbar" data-toolbar="examples">
-                    <button class="tool-button ql-bold" type="button">B</button>
-                    <button class="tool-button ql-italic" type="button"><i>I</i></button>
-                    <span class="tool-divider"></span>
-                    <button class="tool-button ql-inlineMath" type="button">∑ 수식</button>
-                    <button class="tool-button ql-blockMath" type="button">∑ 블록</button>
-                  </div>
-                  <div class="rich-editor" data-editor="examples"></div>
-                  <textarea class="rich-source" name="examples" data-source="examples">{{ form_data.get('examples', '') }}</textarea>
+                  <div class="math-help">지문, 보기, 문제 본문을 이곳에 함께 작성할 수 있습니다. 수식은 LaTeX 문자열로 저장되고 문제 DB에서 렌더링됩니다.</div>
                 </div>
               </label>
               <label class="field full">선택지 <span class="choice-help">객관식 문항은 한 줄에 하나씩 입력 · 수식 LaTeX 지원</span>
