@@ -192,17 +192,34 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
   <script>
-    window.addEventListener("DOMContentLoaded", () => {
-      renderMathInElement(document.body, {
-        delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "\\[", right: "\\]", display: true },
-          { left: "\\(", right: "\\)", display: false },
-          { left: "$", right: "$", display: false }
-        ],
-        throwOnError: false
+    function renderQuestionMath() {
+      const renderer = window.renderMathInElement;
+      if (typeof renderer !== "function") {
+        console.error("KaTeX auto-render failed to load.");
+        return;
+      }
+      document.querySelectorAll(".math-content").forEach((element) => {
+        try {
+          renderer(element, {
+            delimiters: [
+              { left: "$", right: "$", display: true },
+              { left: "\\[", right: "\\]", display: true },
+              { left: "\\(", right: "\\)", display: false },
+              { left: "$", right: "$", display: false }
+            ],
+            throwOnError: false,
+            strict: "ignore"
+          });
+        } catch (error) {
+          console.error("KaTeX rendering failed for question content.", error);
+        }
       });
-    });
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", renderQuestionMath, { once: true });
+    } else {
+      renderQuestionMath();
+    }
 
     document.querySelectorAll(".settings-heading").forEach((heading) => {
       heading.addEventListener("click", () => {

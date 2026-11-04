@@ -216,3 +216,16 @@
   gap: 8px;
   margin-top: 20px;
 }
+
+
+/* Prompt editor: a blockquote is an editable, reusable example/보기 box. */
+.rich-editor .ql-editor blockquote {
+  margin: 12px 0;
+  padding: 12px 15px;
+  border: 1px solid #D8E2EC;
+  border-left: 3px solid #6D91B3;
+  border-radius: 8px;
+  background: #F7FAFC;
+  color: #43566B;
+}
+.rich-editor .ql-editor blockquote p:last-child { margin-bottom: 0; }

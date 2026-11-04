@@ -922,6 +922,24 @@ class EditorFrontendRegressionTests(unittest.TestCase):
         self.assertIn("quill.clipboard.convert({ html: initialHtml })", template)
         self.assertNotIn('quill.insertText(range.index, insertion, "user")', template)
 
+    def test_prompt_editor_has_an_editable_viewing_box_tool(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "static/templates/question_form.html").read_text(encoding="utf-8")
+        stylesheet = (root / "static/styles/pages/legacy-question_form.css").read_text(encoding="utf-8")
+        prompt_section = template.split('data-toolbar="prompt"', 1)[1].split('data-editor="prompt"', 1)[0]
+        self.assertIn('class="tool-button ql-blockquote"', prompt_section)
+        self.assertIn(".rich-editor .ql-editor blockquote", stylesheet)
+        self.assertIn("background: #F7FAFC;", stylesheet)
+        self.assertIn("border: 1px solid #D8E2EC;", stylesheet)
+
+    def test_question_bank_renders_katex_per_question_content_container(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "static/templates/main.html").read_text(encoding="utf-8")
+        self.assertIn("window.renderMathInElement", template)
+        self.assertIn('document.querySelectorAll(".math-content")', template)
+        self.assertIn('document.addEventListener("DOMContentLoaded", renderQuestionMath', template)
+        self.assertIn('{ left: "$", right: "$", display: true }', template)
+
     def test_quill_math_objects_have_no_editor_border_or_background(self):
         stylesheet = (
             Path(__file__).resolve().parents[1]
