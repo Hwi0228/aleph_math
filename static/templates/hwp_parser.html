@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f7f8">
-  <title>HWP 파싱 | HEXORA</title>
+  <title>HWP 파싱 | Aleph Math</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-hwp_parser.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
@@ -114,8 +114,8 @@
               {% for choice in question.choices %}<li>{{ '①②③④⑤'[loop.index0] if loop.index0 < 5 else loop.index ~ '.' }} {{ choice }}</li>{% endfor %}
             </ol>
             {% endif %}
-            <p><span class="label">정답</span><br>{{ question.answer }}</p>
-            <details><summary>해설 보기</summary><p>{{ question.explanation }}</p></details>
+            <p><span class="label">정답</span><br>{{ question.answer if question.answer else "문서에 정답이 포함되어 있지 않습니다." }}</p>
+            {% if question.explanation %}<details><summary>해설 보기</summary><p>{{ question.explanation }}</p></details>{% else %}<p class="hint">해설 미포함</p>{% endif %}
           </article>
           {% endfor %}
           <button class="button primary" type="submit">선택 문항 DB에 등록</button>

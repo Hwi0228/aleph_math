@@ -241,8 +241,130 @@ def _parse_question_row(paragraphs: list[str], number: int) -> dict[str, Any] | 
     }
 
 
+def _paragraphs_from_document(ir: Any) -> list[str]:
+    """표 구조에 의존하지 않고 본문 문단을 문서 순서대로 평문화한다."""
+    iterator = getattr(ir, "iter_blocks", None)
+    if not callable(iterator):
+        return []
+
+    entries: OrderedDict[tuple[int, int], dict[str, Any]] = OrderedDict()
+    anonymous_index = 0
+    for block in iterator(scope="body", recurse=True):
+        kind = _kind(block)
+        if kind not in {"paragraph", "list_item", "formula", "picture"}:
+            continue
+
+        provenance = getattr(block, "prov", None)
+        if provenance is None:
+            key = (10**9, anonymous_index)
+            anonymous_index += 1
+        else:
+            key = _provenance_key(block)
+        entry = entries.setdefault(key, {"text": "", "events": []})
+
+        if kind in {"paragraph", "list_item"}:
+            value = str(getattr(block, "text", "") or "")
+            if value and value != entry["text"]:
+                entry["text"] = (
+                    f'{entry["text"]} {value}'.strip() if entry["text"] else value
+                )
+        else:
+            rendered = _render_formula(block) if kind == "formula" else _render_picture(block)
+            if rendered:
+                char_start = getattr(provenance, "char_start", None)
+                entry["events"].append((char_start, len(entry["events"]), rendered))
+
+    return [
+        _compact(_insert_inline_events(entry["text"], entry["events"]))
+        for entry in entries.values()
+        if entry["text"].strip() or entry["events"]
+    ]
+
+
+_QUESTION_START = re.compile(
+    r"^\s*(?:(?:제\s*)?(\d{1,3})\s*[.)]|"
+    r"(\d{1,3})\s*번(?:\s*[.)])?|Q\s*(\d{1,3})\s*[.:)])\s*(.*)$",
+    re.IGNORECASE,
+)
+
+
+def _parse_numbered_paragraphs(paragraphs: list[str]) -> list[dict[str, Any]]:
+    """문항 번호로 시작하는 일반 문단형 시험지도 파싱한다. 정답·해설은 선택 항목이다."""
+    records: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+
+    def append_question_text(value: str) -> None:
+        value = _compact(value)
+        if value:
+            current["question_parts"].append(value)
+
+    def finish() -> None:
+        if current is None:
+            return
+        question = _compact(" ".join(current["question_parts"]))
+        question = re.sub(r"\s*\[\s*\d+\s*점\s*\]\s*$", "", question).strip()
+        if not question:
+            return
+        choices: list[str] = []
+        for choice in current["choices"]:
+            choice = _compact(choice)
+            if choice and choice not in choices:
+                choices.append(choice)
+        records.append({
+            "number": len(records) + 1,
+            "question": question,
+            "choices": choices,
+            "answer": _compact(current["answer"]),
+            "explanation": _compact(" ".join(current["explanation_parts"])),
+        })
+
+    for raw_paragraph in paragraphs:
+        paragraph = _compact(raw_paragraph)
+        if not paragraph:
+            continue
+
+        start = _QUESTION_START.match(paragraph)
+        if start:
+            finish()
+            current = {
+                "question_parts": [],
+                "choices": [],
+                "answer": "",
+                "explanation_parts": [],
+            }
+            append_question_text(start.group(4))
+            continue
+
+        if current is None:
+            continue
+
+        answer_match = re.search(r"\[정답\]\s*(.*?)(?=\[해설\]|$)", paragraph)
+        explanation_match = re.search(r"\[해설\]\s*(.*)$", paragraph)
+        if answer_match or explanation_match:
+            if answer_match:
+                current["answer"] = _compact(answer_match.group(1))
+            if explanation_match and explanation_match.group(1).strip():
+                current["explanation_parts"].append(explanation_match.group(1))
+            continue
+
+        choice_match = CHOICE_PATTERN.search(paragraph)
+        if choice_match:
+            prefix = paragraph[:choice_match.start()].strip()
+            if prefix:
+                append_question_text(prefix)
+            current["choices"].extend(_split_choices(paragraph[choice_match.start():]))
+        elif current["choices"]:
+            # 보기 문장이 다음 문단으로 이어지는 문서의 줄바꿈을 보존한다.
+            current["choices"][-1] = _compact(current["choices"][-1] + " " + paragraph)
+        else:
+            append_question_text(paragraph)
+
+    finish()
+    return records
+
+
 def parse_questions_from_ir(ir: Any) -> list[dict[str, Any]]:
-    """rhwp-python Document IR에서 시험지 표의 문항/선택지/정답/해설을 추출한다."""
+    """구조화된 정답/해설 표를 우선 처리하고, 일반 문단형 문서로 폴백한다."""
     questions: list[dict[str, Any]] = []
     for table in _iter_tables(ir):
         rows: dict[int, list[Any]] = {}
@@ -257,9 +379,14 @@ def parse_questions_from_ir(ir: Any) -> list[dict[str, Any]]:
             if parsed is not None:
                 questions.append(parsed)
 
+    if questions:
+        return questions
+
+    questions = _parse_numbered_paragraphs(_paragraphs_from_document(ir))
     if not questions:
         raise ValueError(
-            "문항을 찾지 못했습니다. 문항·정답·해설이 표 형태로 구성된 HWP/HWPX인지 확인해 주세요."
+            "문항을 찾지 못했습니다. 문항 번호(예: 1.)로 시작하는 문단이나 "
+            "[정답]/[해설] 표시가 있는 문항 표가 포함되어 있는지 확인해 주세요."
         )
     return questions
 

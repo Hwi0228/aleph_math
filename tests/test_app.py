@@ -864,58 +864,40 @@ class EditorFrontendRegressionTests(unittest.TestCase):
             / "styles"
             / "layout.css"
         ).read_text(encoding="utf-8")
-        self.assertRegex(
-            stylesheet,
-            r"\.app\.app-standard\s*\{[^}]*display:\s*grid\s*;",
-        )
-        self.assertIn(
-            "grid-template-columns: 224px minmax(0, 1fr)",
-            stylesheet,
-        )
+        self.assertRegex(stylesheet, r"\.app\.app-standard\s*\{[^}]*display:\s*grid\s*;")
+        self.assertIn("grid-template-columns: 224px minmax(0, 1fr)", stylesheet)
 
-    def test_tiptap_uses_only_core_and_starter_kit_cdn_modules(self):
-        template = (
-            Path(__file__).resolve().parents[1]
-            / "static"
-            / "templates"
-            / "question_form.html"
-        ).read_text(encoding="utf-8")
-        self.assertIn(
-            "https://cdn.jsdelivr.net/npm/@tiptap/core@3.30.3/+esm",
-            template,
-        )
-        self.assertIn(
-            "https://cdn.jsdelivr.net/npm/@tiptap/starter-kit@3.30.3/+esm",
-            template,
-        )
-        self.assertNotIn("@tiptap/extension-mathematics", template)
-        self.assertNotIn("https://esm.sh/@tiptap/", template)
-        self.assertIn("const [{ Editor, Node }, { default: StarterKit }]", template)
+    def test_question_editor_loads_quill_as_a_global_browser_bundle(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "static/templates/question_form.html").read_text(encoding="utf-8")
+        self.assertIn("https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js", template)
+        self.assertIn("https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css", template)
+        self.assertNotIn('type="module"', template)
+        self.assertNotIn("@tiptap/", template)
+        self.assertIn("if (!window.Quill)", template)
+        self.assertIn("new Quill(mount", template)
 
-    def test_math_nodes_are_defined_locally_without_a_prosemirror_extension_import(self):
-        template = (
-            Path(__file__).resolve().parents[1]
-            / "static"
-            / "templates"
-            / "question_form.html"
-        ).read_text(encoding="utf-8")
-        self.assertIn('name: type === "inline-math" ? "inlineMath" : "blockMath"', template)
-        self.assertIn('createMathNode("inline-math", "span")', template)
-        self.assertIn('createMathNode("block-math", "div")', template)
-        self.assertIn('window.katex.render(latex, dom', template)
-        self.assertIn('type: math === "inline" ? "inlineMath" : "blockMath"', template)
-        self.assertNotIn("migrateMathStrings", template)
+    def test_quill_math_embeds_keep_latex_and_import_existing_tiptap_nodes(self):
+        template = (Path(__file__).resolve().parents[1] / "static/templates/question_form.html").read_text(encoding="utf-8")
+        self.assertIn('static blotName = "inlineMath"', template)
+        self.assertIn('static blotName = "blockMath"', template)
+        self.assertIn("node.dataset.latex = latex", template)
+        self.assertIn("window.katex.render(latex, node", template)
+        self.assertIn('span[data-type="inline-math"]', template)
+        self.assertIn('div[data-type="block-math"]', template)
+        self.assertIn("quill.clipboard.convert({ html: initialHtml })", template)
+        self.assertIn("quill.insertEmbed(index, format", template)
 
-    def test_optional_number_inputs_do_not_render_python_none(self):
-        template = (
-            Path(__file__).resolve().parents[1]
-            / "static"
-            / "templates"
-            / "question_form.html"
-        ).read_text(encoding="utf-8")
-        self.assertIn("form_data.get('points', 4)|default(4, true)", template)
-        self.assertIn("form_data.get('year', '')|default('', true)", template)
-        self.assertIn("form_data.get('page', '')|default('', true)", template)
+    def test_quill_writes_html_back_to_form_fields_and_preserves_plain_text_fallback(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "static/templates/question_form.html").read_text(encoding="utf-8")
+        stylesheet = (root / "static/styles/pages/legacy-question_form.css").read_text(encoding="utf-8")
+        self.assertIn("source.value = editor.root.innerHTML", template)
+        self.assertIn('document.documentElement.classList.add("js-editor-ready")', template)
+        self.assertIn('document.documentElement.classList.remove("js-editor-ready")', template)
+        self.assertIn('element.hidden = true', template)
+        self.assertIn(".js-editor-ready .rich-source { display:none; }", stylesheet)
+        self.assertIn(".rich-source { display:block; }", stylesheet)
 
 
 class HexoraBrandingTests(unittest.TestCase):

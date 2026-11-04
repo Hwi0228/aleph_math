@@ -91,25 +91,50 @@
       .actions .button { flex:1; }
     }
 
-    .rich-editor .tiptap-math-inline {
-      display: inline-block;
-      max-width: 100%;
-      margin: 0 2px;
-      padding: 1px 4px;
-      border: 1px solid #E3EAF1;
-      border-radius: 5px;
-      background: #F7FAFC;
-      vertical-align: middle;
-      cursor: pointer;
-    }
-    .rich-editor .tiptap-math-block {
-      display: block;
-      max-width: 100%;
-      margin: 12px 0;
-      padding: 10px;
-      overflow-x: auto;
-      border-radius: 7px;
+    .rich-toolbar.ql-toolbar.ql-snow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      padding: 7px 8px;
+      border: 0;
+      border-bottom: 1px solid #E8EDF2;
       background: #F8FAFC;
-      text-align: center;
-      cursor: pointer;
+      font-family: inherit;
     }
+    .rich-toolbar .ql-formats { margin-right: 5px; }
+    .rich-toolbar.ql-snow button {
+      width: 29px; height: 28px; padding: 4px; border-radius: 6px;
+    }
+    .rich-toolbar.ql-snow button:hover,
+    .rich-toolbar.ql-snow button.ql-active { background: #EAF1F8; }
+    .rich-toolbar .ql-inlineMath, .rich-toolbar .ql-blockMath {
+      width: auto !important; min-width: 58px; padding: 0 7px !important;
+      color: #526477; font-size: 11px; font-weight: 700;
+    }
+    .rich-editor.ql-container.ql-snow {
+      border: 0; color: #24364B; font-family: inherit; font-size: 13px;
+    }
+    .rich-editor .ql-editor {
+      min-height: 130px; padding: 14px 15px; color: #24364B;
+      font-size: 13px; line-height: 1.8; overflow-wrap: anywhere;
+    }
+    .rich-editor.answer-editor .ql-editor { min-height: 88px; }
+    .rich-editor.explanation-editor .ql-editor { min-height: 150px; }
+    .rich-editor .ql-editor p { margin: 0 0 8px; }
+    .rich-editor .ql-editor ul, .rich-editor .ql-editor ol { padding-left: 24px; }
+    .rich-editor .ql-editor.ql-blank::before {
+      left: 15px; color: #9AA7B4; font-size: 12px; font-style: normal;
+    }
+    .rich-editor .ql-math-inline {
+      display: inline-block; max-width: 100%; margin: 0 2px; padding: 1px 4px;
+      border: 1px solid #E3EAF1; border-radius: 5px; background: #F7FAFC;
+      vertical-align: middle; cursor: pointer;
+    }
+    .rich-editor .ql-math-block {
+      display: block; max-width: 100%; margin: 12px 0; padding: 10px;
+      overflow-x: auto; border-radius: 7px; background: #F8FAFC;
+      text-align: center; cursor: pointer;
+    }
+    .rich-editor .ql-editor .katex-display { margin: 0.25em 0; }
+    .rich-editor .ql-editor .ql-math-block .katex-display { margin: 0; }
