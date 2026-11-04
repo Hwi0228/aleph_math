@@ -609,6 +609,35 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertIn('left: "\\\\("', html)
         self.assertIn('left: "$"', html)
 
+    def test_quill_math_embeds_are_stored_as_latex_text_and_rendered_in_question_bank(self):
+        prompt_html = (
+            '<p>인라인 수식 '
+            '<span class="ql-math-inline" data-latex="x^2 + 1">'
+            '<span class="katex">rendered inline markup</span></span></p>'
+            '<div class="ql-math-block" data-latex="y = x + 2">'
+            '<span class="katex-display">rendered block markup</span></div>'
+        )
+        response = self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(prompt=prompt_html),
+        )
+        self.assertEqual(response.status_code, 302)
+
+        stored_prompt = self.query_one("SELECT prompt FROM questions LIMIT 1")
+        self.assertIn("$x^2 + 1$", stored_prompt)
+        self.assertIn("$$y = x + 2$$", stored_prompt)
+        self.assertNotIn("ql-math", stored_prompt)
+        self.assertNotIn("data-latex", stored_prompt)
+        self.assertNotIn("rendered inline markup", stored_prompt)
+        self.assertNotIn("rendered block markup", stored_prompt)
+
+        question_response = self.client.get("/questions")
+        self.assertEqual(question_response.status_code, 200)
+        self.assertIn("$x^2 + 1$".encode(), question_response.data)
+        self.assertIn("$$y = x + 2$$".encode(), question_response.data)
+        self.assertIn(b"renderMathInElement(document.body", question_response.data)
+
     def test_question_text_is_html_escaped(self):
         self.csrf_post(
             self.client,
@@ -893,6 +922,21 @@ class EditorFrontendRegressionTests(unittest.TestCase):
         self.assertIn('quill.deleteText(index, 1, "user")', template)
         self.assertIn("quill.clipboard.convert({ html: initialHtml })", template)
         self.assertNotIn('quill.insertText(range.index, insertion, "user")', template)
+
+    def test_quill_math_objects_have_no_editor_border_or_background(self):
+        stylesheet = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "styles"
+            / "pages"
+            / "legacy-question_form.css"
+        ).read_text(encoding="utf-8")
+        inline_rule = stylesheet.split(".rich-editor .ql-math-inline", 1)[1].split("}", 1)[0]
+        block_rule = stylesheet.split(".rich-editor .ql-math-block", 1)[1].split("}", 1)[0]
+
+        for rule in (inline_rule, block_rule):
+            self.assertIn("border: 0;", rule)
+            self.assertIn("background: transparent;", rule)
 
     def test_quill_writes_html_back_to_form_fields_and_preserves_plain_text_fallback(self):
         root = Path(__file__).resolve().parents[1]

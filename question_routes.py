@@ -122,8 +122,12 @@ class _RichTextSanitizer(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.parts = []
         self.stack = []
+        self.math_skip_depth = None
 
     def handle_starttag(self, tag, attrs):
+        if self.math_skip_depth is not None:
+            self.math_skip_depth += 1
+            return
         if self.stack and self.stack[-1].startswith("__literal__:"):
             self.parts.append(html.escape(self.get_starttag_text() or f"<{tag}>"))
             return
@@ -133,19 +137,25 @@ class _RichTextSanitizer(HTMLParser):
             return
         if tag not in self.ALLOWED_TAGS:
             return
-        safe_attrs = []
+
         attr_map = dict(attrs)
+        classes = set((attr_map.get("class") or "").split())
         math_type = attr_map.get("data-type")
+        if tag == "span" and "ql-math-inline" in classes:
+            math_type = "inline-math"
+        elif tag in {"span", "div"} and "ql-math-block" in classes:
+            math_type = "block-math"
+
         if tag in {"span", "div"} and math_type in {"inline-math", "block-math"}:
-            safe_attrs = [
-                ("data-type", math_type),
-                ("data-latex", attr_map.get("data-latex", "") or ""),
-            ]
-        encoded = "".join(
-            f' {name}="{html.escape(value, quote=True)}"'
-            for name, value in safe_attrs
-        )
-        self.parts.append(f"<{tag}{encoded}>")
+            latex = attr_map.get("data-latex", "") or ""
+            delimiter = "$$" if math_type == "block-math" else "$"
+            self.parts.append(html.escape(f"{delimiter}{latex}{delimiter}"))
+            # Quill embeds contain rendered KaTeX DOM. Store only the LaTeX text.
+            # Ignore the nested HTML so it cannot leak into the database field.
+            self.math_skip_depth = 1
+            return
+
+        self.parts.append(f"<{tag}>")
         if tag not in self.VOID_TAGS:
             self.stack.append(tag)
 
@@ -155,6 +165,11 @@ class _RichTextSanitizer(HTMLParser):
             self.handle_endtag(tag)
 
     def handle_endtag(self, tag):
+        if self.math_skip_depth is not None:
+            self.math_skip_depth -= 1
+            if self.math_skip_depth == 0:
+                self.math_skip_depth = None
+            return
         if self.stack and self.stack[-1].startswith("__literal__:"):
             literal_tag = self.stack[-1].split(":", 1)[1]
             self.parts.append(html.escape(f"</{tag}>"))
@@ -170,7 +185,8 @@ class _RichTextSanitizer(HTMLParser):
                 break
 
     def handle_data(self, data):
-        self.parts.append(html.escape(data))
+        if self.math_skip_depth is None:
+            self.parts.append(html.escape(data))
 
     def finish(self):
         while self.stack:
