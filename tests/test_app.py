@@ -395,7 +395,7 @@ class QuestionRegistrationTests(unittest.TestCase):
             self.assertIn(f'name="{field}"'.encode(), form_response.data)
         self.assertIn(b'data-editor="answer"', form_response.data)
         self.assertIn("임시 저장".encode(), form_response.data)
-        self.assertIn(b"tiptap", form_response.data)
+        self.assertIn(b"quill@2.0.3", form_response.data)
 
     def test_only_user_created_uuid_folders_and_nested_folders_appear(self):
         empty_response = self.client.get("/questions")
