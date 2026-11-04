@@ -396,6 +396,8 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertIn(b'data-editor="answer"', form_response.data)
         self.assertIn("임시 저장".encode(), form_response.data)
         self.assertIn(b"quill@2.0.3", form_response.data)
+        self.assertIn(b'id="math-input-dialog"', form_response.data)
+        self.assertNotIn(b"window.prompt(", form_response.data)
 
     def test_only_user_created_uuid_folders_and_nested_folders_appear(self):
         empty_response = self.client.get("/questions")

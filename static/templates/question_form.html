@@ -299,6 +299,22 @@
     </main>
   </div>
 
+  <div class="math-dialog-backdrop" id="math-input-dialog" hidden>
+    <section class="math-dialog" role="dialog" aria-modal="true" aria-labelledby="math-dialog-title">
+      <form id="math-input-form">
+        <h2 id="math-dialog-title">LaTeX 수식 입력</h2>
+        <label for="math-latex-input">수식 코드</label>
+        <input id="math-latex-input" type="text" autocomplete="off" spellcheck="false"
+               placeholder="예: \\frac{1}{2} 또는 x^2 + 1">
+        <p>LaTeX 문법으로 입력하세요. 예: \\sqrt{x}, \\frac{a}{b}</p>
+        <div class="math-dialog-actions">
+          <button class="button" id="math-input-cancel" type="button">취소</button>
+          <button class="button primary" type="submit">삽입</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script>
@@ -352,15 +368,59 @@
       Quill.register(InlineMathBlot, true);
       Quill.register(BlockMathBlot, true);
 
+      const mathDialog = document.getElementById("math-input-dialog");
+      const mathDialogForm = document.getElementById("math-input-form");
+      const mathInput = document.getElementById("math-latex-input");
+      const mathCancel = document.getElementById("math-input-cancel");
+      let mathDialogAction = null;
+
+      function closeMathDialog() {
+        mathDialog.hidden = true;
+        mathDialogAction = null;
+      }
+
+      function openMathDialog(initialValue, action) {
+        mathInput.value = initialValue || "";
+        mathDialogAction = action;
+        mathDialog.hidden = false;
+        requestAnimationFrame(() => {
+          mathInput.focus();
+          mathInput.select();
+        });
+      }
+
+      mathDialogForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const latex = mathInput.value.trim();
+        if (!latex) {
+          mathInput.setCustomValidity("LaTeX 수식을 입력해 주세요.");
+          mathInput.reportValidity();
+          return;
+        }
+        mathInput.setCustomValidity("");
+        const action = mathDialogAction;
+        closeMathDialog();
+        if (action) action(latex);
+      });
+      mathInput.addEventListener("input", () => mathInput.setCustomValidity(""));
+      mathCancel.addEventListener("click", closeMathDialog);
+      mathDialog.addEventListener("click", (event) => {
+        if (event.target === mathDialog) closeMathDialog();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !mathDialog.hidden) closeMathDialog();
+      });
+
       function insertMath(format) {
-        const latex = window.prompt("LaTeX 수식을 입력하세요.", "");
-        if (latex === null || !latex.trim()) return;
         const quill = this.quill;
         const range = quill.getSelection(true) || {
           index: Math.max(0, quill.getLength() - 1), length: 0
         };
-        quill.insertEmbed(range.index, format, latex.trim(), "user");
-        quill.setSelection(range.index + 1, 0, "silent");
+        openMathDialog("", (latex) => {
+          quill.focus();
+          quill.insertEmbed(range.index, format, latex, "user");
+          quill.setSelection(range.index + 1, 0, "silent");
+        });
       }
 
       sources.forEach((source) => {
@@ -400,13 +460,14 @@
           if (!mathNode || !mount.contains(mathNode)) return;
           const blot = Quill.find(mathNode);
           if (!blot) return;
-          const nextLatex = window.prompt("LaTeX 수식을 수정하세요.", mathNode.dataset.latex || "");
-          if (nextLatex === null || !nextLatex.trim()) return;
           const index = quill.getIndex(blot);
           const format = mathNode.classList.contains("ql-math-block") ? "blockMath" : "inlineMath";
-          quill.deleteText(index, 1, "user");
-          quill.insertEmbed(index, format, nextLatex.trim(), "user");
-          quill.setSelection(index + 1, 0, "silent");
+          openMathDialog(mathNode.dataset.latex || "", (nextLatex) => {
+            quill.focus();
+            quill.deleteText(index, 1, "user");
+            quill.insertEmbed(index, format, nextLatex, "user");
+            quill.setSelection(index + 1, 0, "silent");
+          });
         });
         editors.set(key, quill);
       });
