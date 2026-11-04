@@ -126,18 +126,10 @@
     .rich-editor .ql-editor.ql-blank::before {
       left: 15px; color: #9AA7B4; font-size: 12px; font-style: normal;
     }
-    .rich-editor .ql-math-inline {
-      display: inline-block; max-width: 100%; margin: 0 2px; padding: 1px 4px;
-      border: 1px solid #E3EAF1; border-radius: 5px; background: #F7FAFC;
-      vertical-align: middle; cursor: pointer;
+    .rich-editor .ql-editor {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
-    .rich-editor .ql-math-block {
-      display: block; max-width: 100%; margin: 12px 0; padding: 10px;
-      overflow-x: auto; border-radius: 7px; background: #F8FAFC;
-      text-align: center; cursor: pointer;
-    }
-    .rich-editor .ql-editor .katex-display { margin: 0.25em 0; }
-    .rich-editor .ql-editor .ql-math-block .katex-display { margin: 0; }
 
 
 /* Quill inherits the surrounding form label's semibold weight unless reset. */

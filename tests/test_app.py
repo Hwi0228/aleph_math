@@ -879,16 +879,20 @@ class EditorFrontendRegressionTests(unittest.TestCase):
         self.assertIn("if (!window.Quill)", template)
         self.assertIn("new Quill(mount", template)
 
-    def test_quill_math_embeds_keep_latex_and_import_existing_tiptap_nodes(self):
+    def test_quill_math_is_editable_text_and_imports_legacy_math_nodes(self):
         template = (Path(__file__).resolve().parents[1] / "static/templates/question_form.html").read_text(encoding="utf-8")
-        self.assertIn('static blotName = "inlineMath"', template)
-        self.assertIn('static blotName = "blockMath"', template)
-        self.assertIn("node.dataset.latex = latex", template)
-        self.assertIn("window.katex.render(latex, node", template)
+        self.assertIn('quill.insertText(range.index, insertion, "user")', template)
+        self.assertIn("const value = isBlock", template)
+        self.assertIn("function legacyMathText(node, displayMode)", template)
         self.assertIn('span[data-type="inline-math"]', template)
         self.assertIn('div[data-type="block-math"]', template)
+        self.assertIn("span.ql-math-inline", template)
+        self.assertIn("div.ql-math-block", template)
         self.assertIn("quill.clipboard.convert({ html: initialHtml })", template)
-        self.assertIn("quill.insertEmbed(index, format", template)
+        self.assertNotIn('static blotName = "inlineMath"', template)
+        self.assertNotIn('static blotName = "blockMath"', template)
+        self.assertNotIn("quill.insertEmbed(", template)
+        self.assertNotIn('contenteditable", "false"', template)
 
     def test_quill_writes_html_back_to_form_fields_and_preserves_plain_text_fallback(self):
         root = Path(__file__).resolve().parents[1]
