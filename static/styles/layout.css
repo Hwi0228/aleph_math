@@ -14,7 +14,7 @@
 .site-button { display: inline-flex; min-height: 35px; align-items: center; justify-content: center; padding: 0 12px; border: 1px solid var(--aleph-border); border-radius: var(--aleph-radius-sm); background: #fff; color: #526276; font-size: 10px; font-weight: 750; text-decoration: none; white-space: nowrap; }
 .site-button.primary { border-color: var(--aleph-primary); background: var(--aleph-primary); color: #fff; }
 .sidebar .brand { display: flex !important; height: auto !important; align-items: center; gap: 10px !important; padding: 0 7px 24px !important; color: var(--aleph-text) !important; font-size: 14px !important; font-weight: 800 !important; }
-.sidebar .brand-mark { display: grid !important; width: 34px !important; height: 34px !important; flex: 0 0 34px; place-items: center; border: 0 !important; border-radius: 10px !important; background: var(--aleph-primary) !important; color: #fff !important; font: 25px Georgia, serif !important; }
+.sidebar .brand-mark { display: grid !important; width: 34px !important; height: 34px !important; flex: 0 0 34px; place-items: center; border: 0 !important; border-radius: 10px !important; background: var(--aleph-primary) !important; color: #fff !important; font: 23px "Segoe UI Symbol", "Noto Sans Symbols 2", serif !important; }
 .sidebar .nav-label { margin: 12px 9px 7px !important; color: #98A5B2 !important; font-size: 10px !important; font-weight: 800; letter-spacing: .08em; }
 .sidebar .nav-section { display: grid; gap: 4px !important; }
 .sidebar .nav-link { display: flex !important; min-height: 40px !important; align-items: center; gap: 10px !important; padding: 0 10px !important; border: 0 !important; border-radius: 9px !important; background: transparent !important; color: #586779 !important; font-size: 12px !important; font-weight: 600 !important; text-decoration: none; }
@@ -48,4 +48,8 @@
   .site-header { align-items: flex-start; flex-direction: column; }
   .site-header-actions { width: 100%; }
   .site-button { flex: 1; }
+}
+
+@media (max-width: 760px) {
+  .app.app-standard .brand-lockup { display: none !important; }
 }

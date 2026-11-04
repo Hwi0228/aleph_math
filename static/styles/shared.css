@@ -31,3 +31,11 @@ main>.site-header{width:min(100%,1000px);margin-right:auto;margin-left:auto}.app
 @media(max-width:760px){.app-standard{grid-template-columns:68px minmax(0,1fr)!important}.app-standard>.sidebar{align-items:center;height:100vh;padding-right:6px!important;padding-left:6px!important}.app-standard .brand{justify-content:center;width:100%;padding-right:0!important;padding-left:0!important;font-size:0!important}.app-standard .nav-label,.app-standard .nav-link .nav-label-text,.app-standard .sidebar-note,.app-standard .account-details,.app-standard .account-link,.app-standard .account-footer form{display:none!important}.app-standard .nav-link{width:46px;justify-content:center;padding:0!important}.app-standard .account-footer{display:flex!important;justify-content:center;padding-top:12px!important}.app-question-bank .site-header{flex-wrap:wrap}}
 @media(max-width:640px){.app-question-bank{display:flex!important;height:100dvh;min-height:520px}.app-question-bank>.sidebar{width:54px;flex:0 0 54px}.app-question-bank .filter-panel{display:none}.app-question-bank .results{flex:1;min-width:0}}
 @media(max-width:520px){.site-header{align-items:flex-start;flex-direction:column}.site-header-actions{width:100%}.site-button{flex:1}}
+
+/* HEXORA brand lockup */
+.brand-lockup { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px; line-height: 1; }
+.brand-name { color: var(--aleph-ink); font-size: 13px; font-weight: 850; letter-spacing: .07em; }
+.brand-korean { color: var(--aleph-muted); font-size: 9px; font-weight: 650; letter-spacing: .06em; }
+.brand-mark { font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif !important; font-size: 23px !important; }
+@media(max-width:1120px) { .app-question-bank .brand-lockup { display: none !important; } }
+@media(max-width:760px) { .app-standard .brand-lockup { display: none !important; } }

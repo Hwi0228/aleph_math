@@ -895,3 +895,39 @@ class EditorFrontendRegressionTests(unittest.TestCase):
         )
         self.assertIn("?external=@tiptap/core", template)
 
+
+class HexoraBrandingTests(unittest.TestCase):
+    def test_hexora_branding_is_used_across_the_shared_shell_and_auth_page(self):
+        root = Path(__file__).resolve().parents[1]
+        sidebar = (root / "static/templates/partials/sidebar.html").read_text(encoding="utf-8")
+        header = (root / "static/templates/partials/header.html").read_text(encoding="utf-8")
+        account = (root / "static/templates/account_form.html").read_text(encoding="utf-8")
+
+        self.assertIn(">⌬<", sidebar)
+        self.assertIn(">HEXORA<", sidebar)
+        self.assertIn(">헥소라<", sidebar)
+        self.assertIn("HEXORA", header)
+        self.assertIn(">⌬<", account)
+        self.assertIn(">헥소라<", account)
+
+    def test_hexora_rebrand_preserves_the_existing_academic_blue_palette(self):
+        root = Path(__file__).resolve().parents[1]
+        tokens = (root / "static/styles/tokens.css").read_text(encoding="utf-8")
+        self.assertIn("#356A9A", tokens)
+        self.assertIn("#285477", tokens)
+        self.assertIn("#EAF1F8", tokens)
+
+    def test_visible_templates_and_project_readme_do_not_keep_the_previous_brand(self):
+        root = Path(__file__).resolve().parents[1]
+        old_name = "ALEPH " + "MATH"
+        template_root = root / "static/templates"
+        template_files = list(template_root.glob("*.html"))
+        template_files += list((template_root / "partials").glob("*.html"))
+        for path in template_files:
+            content = path.read_text(encoding="utf-8")
+            self.assertNotIn(old_name, content, msg=str(path))
+            self.assertNotIn("Aleph Math", content, msg=str(path))
+
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        self.assertIn("# HEXORA (헥소라)", readme)
+
