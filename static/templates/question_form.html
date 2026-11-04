@@ -121,7 +121,7 @@
                 </select>
               </label>
               <label class="field">배점
-                <input name="points" type="number" min="1" max="100" value="{{ form_data.get('points', 4) }}">
+                <input name="points" type="number" min="1" max="100" value="{{ form_data.get('points', 4)|default(4, true) }}">
               </label>
               <div class="field full standard-box">
                 <label for="achievement-standard">성취기준 <span class="standard-status" id="standard-status">단원을 선택하면 자동으로 입력됩니다.</span></label>
@@ -255,7 +255,7 @@
                 <input name="source" maxlength="300" value="{{ form_data.get('source', '') }}" placeholder="교재명, 출판사, 평가기관 등">
               </label>
               <label class="field">출제 연도
-                <input name="year" type="number" min="1" max="2200" value="{{ form_data.get('year', '') }}" placeholder="예: 2026">
+                <input name="year" type="number" min="1" max="2200" value="{{ form_data.get('year', '')|default('', true) }}" placeholder="예: 2026">
               </label>
               <label class="field">시험 / 회차
                 <input name="exam" maxlength="200" value="{{ form_data.get('exam', '') }}" placeholder="예: 10월 전국연합학력평가">
@@ -264,7 +264,7 @@
                 <input name="original_question_number" maxlength="50" value="{{ form_data.get('original_question_number', '') }}" placeholder="예: 12번">
               </label>
               <label class="field">페이지
-                <input name="page" type="number" min="1" max="10000" value="{{ form_data.get('page', '') }}" placeholder="페이지">
+                <input name="page" type="number" min="1" max="10000" value="{{ form_data.get('page', '')|default('', true) }}" placeholder="페이지">
               </label>
               <label class="field">출처 URL
                 <input name="source_url" type="url" maxlength="1000" value="{{ form_data.get('source_url', '') }}" placeholder="https://...">
@@ -298,31 +298,130 @@
     </main>
   </div>
 
-  <script type="importmap">
-  {
-    "imports": {
-      "@tiptap/core": "https://esm.sh/@tiptap/core@3.30.3"
-    }
-  }
-  </script>
-
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
   <script type="module">
     const form = document.getElementById("question-form");
     const sources = Array.from(document.querySelectorAll("[data-source]"));
     const editors = new Map();
 
     try {
-      const [{ Editor }, { default: StarterKit }, { default: Underline }, { Mathematics, migrateMathStrings }] = await Promise.all([
-        import("https://esm.sh/@tiptap/core@3.30.3"),
-        import("https://esm.sh/@tiptap/starter-kit@3.30.3?external=@tiptap/core"),
-        import("https://esm.sh/@tiptap/extension-underline@3.30.3?external=@tiptap/core"),
-        import("https://esm.sh/@tiptap/extension-mathematics@3.30.3?external=@tiptap/core")
+      const [{ Editor, Node }, { default: StarterKit }] = await Promise.all([
+        import("https://cdn.jsdelivr.net/npm/@tiptap/core@3.30.3/+esm"),
+        import("https://cdn.jsdelivr.net/npm/@tiptap/starter-kit@3.30.3/+esm")
       ]);
+
+      function createMathNodeView(type, initialNode, editor, getPos) {
+        let currentNode = initialNode;
+        const isInline = type === "inline-math";
+        const dom = document.createElement(isInline ? "span" : "div");
+        dom.classList.add(
+          "tiptap-mathematics-render",
+          isInline ? "tiptap-math-inline" : "tiptap-math-block"
+        );
+        dom.dataset.type = type;
+        dom.contentEditable = "false";
+
+        function renderMath() {
+          const latex = String(currentNode.attrs.latex || "");
+          dom.dataset.latex = latex;
+          dom.replaceChildren();
+          if (window.katex && latex) {
+            try {
+              window.katex.render(latex, dom, {
+                throwOnError: false,
+                displayMode: !isInline
+              });
+              return;
+            } catch (error) {
+              console.warn("Could not render the formula in the editor.", error);
+            }
+          }
+          dom.textContent = latex || "수식";
+        }
+
+        dom.addEventListener("dblclick", () => {
+          if (!editor.isEditable) return;
+          const nextLatex = window.prompt(
+            "LaTeX 수식을 입력하세요.",
+            currentNode.attrs.latex || ""
+          );
+          if (nextLatex === null) return;
+          let position;
+          try {
+            position = getPos();
+          } catch (error) {
+            return;
+          }
+          if (typeof position !== "number") return;
+          const transaction = editor.state.tr.setNodeMarkup(
+            position,
+            undefined,
+            { ...currentNode.attrs, latex: nextLatex.trim() }
+          );
+          editor.view.dispatch(transaction);
+          editor.commands.focus();
+        });
+
+        renderMath();
+        return {
+          dom,
+          update(nextNode) {
+            if (nextNode.type !== currentNode.type) return false;
+            currentNode = nextNode;
+            renderMath();
+            return true;
+          },
+          stopEvent(event) {
+            return event.type === "dblclick";
+          },
+          ignoreMutation() {
+            return true;
+          }
+        };
+      }
+
+      function createMathNode(type, tag) {
+        return Node.create({
+          name: type === "inline-math" ? "inlineMath" : "blockMath",
+          group: type === "inline-math" ? "inline" : "block",
+          inline: type === "inline-math",
+          atom: true,
+          selectable: true,
+          addAttributes() {
+            return {
+              latex: {
+                default: "",
+                parseHTML: element => element.getAttribute("data-latex") || "",
+                renderHTML: attributes => ({
+                  "data-latex": attributes.latex || ""
+                })
+              }
+            };
+          },
+          parseHTML() {
+            return [{ tag: tag + '[data-type="' + type + '"]' }];
+          },
+          renderHTML({ node, HTMLAttributes }) {
+            const delimiters = type === "inline-math"
+              ? ["\\(", "\\)"]
+              : ["\\[", "\\]"];
+            return [
+              tag,
+              { ...HTMLAttributes, "data-type": type },
+              delimiters[0] + node.attrs.latex + delimiters[1]
+            ];
+          },
+          addNodeView() {
+            return ({ node, editor, getPos }) =>
+              createMathNodeView(type, node, editor, getPos);
+          }
+        });
+      }
 
       const extensions = [
         StarterKit,
-        Underline,
-        Mathematics.configure({ katexOptions: { throwOnError: false } })
+        createMathNode("inline-math", "span"),
+        createMathNode("block-math", "div")
       ];
 
       sources.forEach((source) => {
@@ -342,7 +441,6 @@
             source.value = current.getHTML();
           }
         });
-        migrateMathStrings(editor);
         source.required = false;
         editors.set(key, editor);
       });
@@ -365,8 +463,10 @@
             if (math) {
               const latex = window.prompt("LaTeX 수식을 입력하세요.", "");
               if (latex === null || !latex.trim()) return;
-              if (math === "inline") editor.chain().focus().insertInlineMath({ latex: latex.trim() }).run();
-              if (math === "block") editor.chain().focus().insertBlockMath({ latex: latex.trim() }).run();
+              editor.chain().focus().insertContent({
+                type: math === "inline" ? "inlineMath" : "blockMath",
+                attrs: { latex: latex.trim() }
+              }).run();
             }
           });
         });
