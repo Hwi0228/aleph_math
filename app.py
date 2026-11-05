@@ -36,6 +36,16 @@ def create_app():
     if not app.config["SECRET_KEY"]:
         app.config["SECRET_KEY"] = _secret_key(app)
 
+    version_path = Path(__file__).resolve().parent / "VERSION"
+    try:
+        app.config["APP_VERSION"] = version_path.read_text(encoding="utf-8").strip() or "dev"
+    except OSError:
+        app.config["APP_VERSION"] = "dev"
+
+    @app.context_processor
+    def inject_app_version():
+        return {"app_version": app.config["APP_VERSION"]}
+
     register_auth_routes(app)
     register_dashboard_routes(app)
     register_question_routes(app)

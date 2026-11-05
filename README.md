@@ -58,4 +58,8 @@ Flask 진입점은 `app.py`이며, DB, 인증, 문제/폴더, HWP 파싱은 각�
 
 ## 버전 관리
 
-현재 버전은 `0.1.0`입니다. 기존 개발 이력은 기준 버전 `0.0.0`으로 간주하고, 이 버전부터 Semantic Versioning을 적용합니다. 기능 단위 변경은 버전별 PR 하나로 관리하며, 각 PR은 `VERSION`과 `CHANGELOG.md`를 함께 갱신합니다. 기능 추가는 MINOR, 하위 호환 수정은 PATCH, 호환성이 깨지는 변경은 MAJOR 버전을 올립니다.
+현재 버전은 `VERSION` 파일을 단일 기준으로 사용합니다. 기존 개발 이력은 기준 버전 `0.0.0`으로 간주하고, 이 버전부터 Semantic Versioning을 적용합니다. 기능 단위 변경은 버전별 PR 하나로 관리하며, 버전 변경 PR에는 `VERSION`과 `CHANGELOG.md`를 함께 갱신합니다. 기능 추가는 MINOR, 하위 호환 수정은 PATCH, 호환성이 깨지는 변경은 MAJOR 버전을 올립니다.
+
+PR을 검토한 뒤 `master`에 병합하면 GitHub Actions가 `VERSION`의 변경 여부를 확인하고, 해당 버전의 `CHANGELOG.md` 항목을 릴리즈 노트로 사용해 `vX.Y.Z` 태그와 GitHub Release를 자동 생성합니다. PR 승인만으로는 릴리즈하지 않으며, 병합이 완료된 뒤에만 실행됩니다. 별도 PAT 없이 워크플로의 `GITHUB_TOKEN`을 사용합니다.
+
+앱 공통 사이드바 하단의 버전 표시는 실행 시 `VERSION` 파일에서 읽습니다. 따라서 `master` 병합 후 호스팅 서비스가 새 코드를 배포하면 사이트에도 동일한 버전이 표시됩니다.

@@ -39,3 +39,21 @@ main>.site-header{width:min(100%,1000px);margin-right:auto;margin-left:auto}.app
 .brand-mark { font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif !important; font-size: 23px !important; }
 @media(max-width:1120px) { .app-question-bank .brand-lockup { display: none !important; } }
 @media(max-width:760px) { .app-standard .brand-lockup { display: none !important; } }
+
+
+/* Application version is sourced from VERSION and shared across signed-in pages. */
+.app-version {
+  margin-top: 8px;
+  padding: 9px 4px 0;
+  border-top: 1px solid #EEF1F4;
+  color: #98A4B0;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .04em;
+}
+@media(max-width:1120px) {
+  .app-question-bank .app-version { display: none; }
+}
+@media(max-width:760px) {
+  .app-standard .app-version { display: none; }
+}
