@@ -73,9 +73,7 @@ class QuestionRegistrationTests(unittest.TestCase):
             "difficulty": "중",
             "question_type": "단답형",
             "license": "ORIGINAL",
-            "passage": "지문 $x^2$",
-            "prompt": "문제 내용 \\(x^2\\)",
-            "examples": "보기 $$x + 1$$",
+            "prompt": "<p>지문 $x^2$</p><p>문제 내용 \\(x^2\\)</p><p>보기 $$x + 1$$</p>",
             "choices": "첫 번째 $x$\n두 번째\n세 번째",
             "answer": "$x = 2$",
             "source": "직접 등록한 출처",
@@ -152,7 +150,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(self.query_one("SELECT COUNT(*) FROM question_revisions WHERE question_id = 1"), 1)
         self.assertEqual(
             self.query_one("SELECT prompt FROM questions WHERE id = 1"),
-            "문제 내용 \\(x^2\\)",
+            "<p>지문 $x^2$</p><p>문제 내용 \\(x^2\\)</p><p>보기 $$x + 1$$</p>",
         )
         self.assertEqual(self.query_one("SELECT COUNT(*) FROM question_drafts"), 1)
 
@@ -384,18 +382,21 @@ class QuestionRegistrationTests(unittest.TestCase):
             "question_type",
             "achievement_standard",
             "title",
-            "passage",
             "prompt",
-            "examples",
             "choices",
             "answer",
             "source",
             "license",
         ):
             self.assertIn(f'name="{field}"'.encode(), form_response.data)
+        self.assertNotIn(b'name="passage"', form_response.data)
+        self.assertNotIn(b'name="examples"', form_response.data)
+        self.assertIn(b'data-editor="prompt"', form_response.data)
         self.assertIn(b'data-editor="answer"', form_response.data)
         self.assertIn("임시 저장".encode(), form_response.data)
-        self.assertIn(b"tiptap", form_response.data)
+        self.assertIn(b"quill@2.0.3", form_response.data)
+        self.assertIn(b'id="math-input-dialog"', form_response.data)
+        self.assertNotIn(b"window.prompt(", form_response.data)
 
     def test_only_user_created_uuid_folders_and_nested_folders_appear(self):
         empty_response = self.client.get("/questions")
@@ -529,9 +530,9 @@ class QuestionRegistrationTests(unittest.TestCase):
             "수학",
             "고2",
             "미분",
-            "지문 $x^2$",
-            "문제 내용 \\(x^2\\)",
-            "보기 $$x + 1$$",
+            "",
+            "<p>지문 $x^2$</p><p>문제 내용 \\(x^2\\)</p><p>보기 $$x + 1$$</p>",
+            "",
         ))
         self.assertEqual(json.loads(row[7]), ["첫 번째 $x$", "두 번째", "세 번째"])
         self.assertEqual(row[8:], ("$x = 2$", "직접 등록한 출처", 2026, 12))
@@ -606,6 +607,36 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertIn("auto-render.min.js", html)
         self.assertIn('left: "\\\\("', html)
         self.assertIn('left: "$"', html)
+
+    def test_quill_math_embeds_are_stored_as_latex_text_and_rendered_in_question_bank(self):
+        prompt_html = (
+            '<p>인라인 수식 '
+            '<span class="ql-math-inline" data-latex="x^2 + 1">'
+            '<span class="katex">rendered inline markup</span></span></p>'
+            '<div class="ql-math-block" data-latex="y = x + 2">'
+            '<span class="katex-display">rendered block markup</span></div>'
+        )
+        response = self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(prompt=prompt_html),
+        )
+        self.assertEqual(response.status_code, 302)
+
+        stored_prompt = self.query_one("SELECT prompt FROM questions LIMIT 1")
+        self.assertIn("$x^2 + 1$", stored_prompt)
+        self.assertIn("$$y = x + 2$$", stored_prompt)
+        self.assertNotIn("ql-math", stored_prompt)
+        self.assertNotIn("data-latex", stored_prompt)
+        self.assertNotIn("rendered inline markup", stored_prompt)
+        self.assertNotIn("rendered block markup", stored_prompt)
+
+        question_response = self.client.get("/questions")
+        self.assertEqual(question_response.status_code, 200)
+        self.assertIn("$x^2 + 1$".encode(), question_response.data)
+        self.assertIn("$$y = x + 2$$".encode(), question_response.data)
+        self.assertIn(b"window.renderMathInElement", question_response.data)
+        self.assertIn(b'document.querySelectorAll(".math-content")', question_response.data)
 
     def test_question_text_is_html_escaped(self):
         self.csrf_post(
@@ -864,58 +895,77 @@ class EditorFrontendRegressionTests(unittest.TestCase):
             / "styles"
             / "layout.css"
         ).read_text(encoding="utf-8")
-        self.assertRegex(
-            stylesheet,
-            r"\.app\.app-standard\s*\{[^}]*display:\s*grid\s*;",
-        )
-        self.assertIn(
-            "grid-template-columns: 224px minmax(0, 1fr)",
-            stylesheet,
-        )
+        self.assertRegex(stylesheet, r"\.app\.app-standard\s*\{[^}]*display:\s*grid\s*;")
+        self.assertIn("grid-template-columns: 224px minmax(0, 1fr)", stylesheet)
 
-    def test_tiptap_uses_only_core_and_starter_kit_cdn_modules(self):
-        template = (
+    def test_question_editor_loads_quill_as_a_global_browser_bundle(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "static/templates/question_form.html").read_text(encoding="utf-8")
+        self.assertIn("https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js", template)
+        self.assertIn("https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css", template)
+        self.assertNotIn('type="module"', template)
+        self.assertNotIn("@tiptap/", template)
+        self.assertIn("if (!window.Quill)", template)
+        self.assertIn("new Quill(mount", template)
+
+    def test_quill_math_remains_atomic_and_supports_clipboard_roundtrips(self):
+        template = (Path(__file__).resolve().parents[1] / "static/templates/question_form.html").read_text(encoding="utf-8")
+        self.assertIn('static blotName = "inlineMath"', template)
+        self.assertIn('static blotName = "blockMath"', template)
+        self.assertIn('node.dataset.latex = latex', template)
+        self.assertIn('node.setAttribute("contenteditable", "false")', template)
+        self.assertIn('quill.insertEmbed(index, format, latex, "user")', template)
+        self.assertIn('quill.clipboard.addMatcher("span.ql-math-inline"', template)
+        self.assertIn('quill.clipboard.addMatcher("div.ql-math-block"', template)
+        self.assertIn('quill.clipboard.addMatcher(\'span[data-type="inline-math"]\'', template)
+        self.assertIn('quill.clipboard.addMatcher(\'div[data-type="block-math"]\'', template)
+        self.assertIn('quill.deleteText(index, 1, "user")', template)
+        self.assertIn("quill.clipboard.convert({ html: initialHtml })", template)
+        self.assertNotIn('quill.insertText(range.index, insertion, "user")', template)
+
+    def test_prompt_editor_has_an_editable_viewing_box_tool(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "static/templates/question_form.html").read_text(encoding="utf-8")
+        stylesheet = (root / "static/styles/pages/legacy-question_form.css").read_text(encoding="utf-8")
+        prompt_section = template.split('data-toolbar="prompt"', 1)[1].split('data-editor="prompt"', 1)[0]
+        self.assertIn('class="tool-button ql-blockquote"', prompt_section)
+        self.assertIn(".rich-editor .ql-editor blockquote", stylesheet)
+        self.assertIn("background: #F7FAFC;", stylesheet)
+        self.assertIn("border: 1px solid #D8E2EC;", stylesheet)
+
+    def test_question_bank_renders_katex_per_question_content_container(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "static/templates/main.html").read_text(encoding="utf-8")
+        self.assertIn("window.renderMathInElement", template)
+        self.assertIn('document.querySelectorAll(".math-content")', template)
+        self.assertIn('document.addEventListener("DOMContentLoaded", renderQuestionMath', template)
+        self.assertIn('{ left: "$", right: "$", display: true }', template)
+
+    def test_quill_math_objects_have_no_editor_border_or_background(self):
+        stylesheet = (
             Path(__file__).resolve().parents[1]
             / "static"
-            / "templates"
-            / "question_form.html"
+            / "styles"
+            / "pages"
+            / "legacy-question_form.css"
         ).read_text(encoding="utf-8")
-        self.assertIn(
-            "https://cdn.jsdelivr.net/npm/@tiptap/core@3.30.3/+esm",
-            template,
-        )
-        self.assertIn(
-            "https://cdn.jsdelivr.net/npm/@tiptap/starter-kit@3.30.3/+esm",
-            template,
-        )
-        self.assertNotIn("@tiptap/extension-mathematics", template)
-        self.assertNotIn("https://esm.sh/@tiptap/", template)
-        self.assertIn("const [{ Editor, Node }, { default: StarterKit }]", template)
+        inline_rule = stylesheet.split(".rich-editor .ql-math-inline", 1)[1].split("}", 1)[0]
+        block_rule = stylesheet.split(".rich-editor .ql-math-block", 1)[1].split("}", 1)[0]
 
-    def test_math_nodes_are_defined_locally_without_a_prosemirror_extension_import(self):
-        template = (
-            Path(__file__).resolve().parents[1]
-            / "static"
-            / "templates"
-            / "question_form.html"
-        ).read_text(encoding="utf-8")
-        self.assertIn('name: type === "inline-math" ? "inlineMath" : "blockMath"', template)
-        self.assertIn('createMathNode("inline-math", "span")', template)
-        self.assertIn('createMathNode("block-math", "div")', template)
-        self.assertIn('window.katex.render(latex, dom', template)
-        self.assertIn('type: math === "inline" ? "inlineMath" : "blockMath"', template)
-        self.assertNotIn("migrateMathStrings", template)
+        for rule in (inline_rule, block_rule):
+            self.assertIn("border: 0;", rule)
+            self.assertIn("background: transparent;", rule)
 
-    def test_optional_number_inputs_do_not_render_python_none(self):
-        template = (
-            Path(__file__).resolve().parents[1]
-            / "static"
-            / "templates"
-            / "question_form.html"
-        ).read_text(encoding="utf-8")
-        self.assertIn("form_data.get('points', 4)|default(4, true)", template)
-        self.assertIn("form_data.get('year', '')|default('', true)", template)
-        self.assertIn("form_data.get('page', '')|default('', true)", template)
+    def test_quill_writes_html_back_to_form_fields_and_preserves_plain_text_fallback(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "static/templates/question_form.html").read_text(encoding="utf-8")
+        stylesheet = (root / "static/styles/pages/legacy-question_form.css").read_text(encoding="utf-8")
+        self.assertIn("source.value = editor.root.innerHTML", template)
+        self.assertIn('document.documentElement.classList.add("js-editor-ready")', template)
+        self.assertIn('document.documentElement.classList.remove("js-editor-ready")', template)
+        self.assertIn('element.hidden = true', template)
+        self.assertIn(".js-editor-ready .rich-source { display:none; }", stylesheet)
+        self.assertIn(".rich-source { display:block; }", stylesheet)
 
 
 class HexoraBrandingTests(unittest.TestCase):

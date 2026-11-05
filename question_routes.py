@@ -122,8 +122,12 @@ class _RichTextSanitizer(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.parts = []
         self.stack = []
+        self.math_skip_depth = None
 
     def handle_starttag(self, tag, attrs):
+        if self.math_skip_depth is not None:
+            self.math_skip_depth += 1
+            return
         if self.stack and self.stack[-1].startswith("__literal__:"):
             self.parts.append(html.escape(self.get_starttag_text() or f"<{tag}>"))
             return
@@ -133,19 +137,25 @@ class _RichTextSanitizer(HTMLParser):
             return
         if tag not in self.ALLOWED_TAGS:
             return
-        safe_attrs = []
+
         attr_map = dict(attrs)
+        classes = set((attr_map.get("class") or "").split())
         math_type = attr_map.get("data-type")
+        if tag == "span" and "ql-math-inline" in classes:
+            math_type = "inline-math"
+        elif tag in {"span", "div"} and "ql-math-block" in classes:
+            math_type = "block-math"
+
         if tag in {"span", "div"} and math_type in {"inline-math", "block-math"}:
-            safe_attrs = [
-                ("data-type", math_type),
-                ("data-latex", attr_map.get("data-latex", "") or ""),
-            ]
-        encoded = "".join(
-            f' {name}="{html.escape(value, quote=True)}"'
-            for name, value in safe_attrs
-        )
-        self.parts.append(f"<{tag}{encoded}>")
+            latex = attr_map.get("data-latex", "") or ""
+            delimiter = "$$" if math_type == "block-math" else "$"
+            self.parts.append(html.escape(f"{delimiter}{latex}{delimiter}"))
+            # Quill embeds contain rendered KaTeX DOM. Store only the LaTeX text.
+            # Ignore the nested HTML so it cannot leak into the database field.
+            self.math_skip_depth = 1
+            return
+
+        self.parts.append(f"<{tag}>")
         if tag not in self.VOID_TAGS:
             self.stack.append(tag)
 
@@ -155,6 +165,11 @@ class _RichTextSanitizer(HTMLParser):
             self.handle_endtag(tag)
 
     def handle_endtag(self, tag):
+        if self.math_skip_depth is not None:
+            self.math_skip_depth -= 1
+            if self.math_skip_depth == 0:
+                self.math_skip_depth = None
+            return
         if self.stack and self.stack[-1].startswith("__literal__:"):
             literal_tag = self.stack[-1].split(":", 1)[1]
             self.parts.append(html.escape(f"</{tag}>"))
@@ -170,7 +185,8 @@ class _RichTextSanitizer(HTMLParser):
                 break
 
     def handle_data(self, data):
-        self.parts.append(html.escape(data))
+        if self.math_skip_depth is None:
+            self.parts.append(html.escape(data))
 
     def finish(self):
         while self.stack:
@@ -269,9 +285,9 @@ def _collect_question_data(form):
         "difficulty": form.get("difficulty", "중").strip(),
         "question_type": form.get("question_type", "단답형").strip(),
         "points": None,
-        "passage": sanitize_rich_html(form.get("passage", "")),
+        "passage": "",
         "prompt": sanitize_rich_html(form.get("prompt", "")),
-        "examples": sanitize_rich_html(form.get("examples", "")),
+        "examples": "",
         "choices": [
             sanitize_rich_html(value.strip())
             for value in form.get("choices", "").splitlines()
@@ -314,8 +330,7 @@ def _collect_question_data(form):
     for field, label, maximum in (
         ("title", "문항 제목", 200), ("grade", "학년", 50), ("course", "교과목", 100),
         ("unit", "단원", 200), ("achievement_standard", "성취기준", 4000),
-        ("passage", "지문", 20000), ("prompt", "문제 내용", 20000),
-        ("examples", "보기", 10000), ("answer", "정답", 10000),
+        ("prompt", "문제 내용", 50000), ("answer", "정답", 10000),
         ("explanation", "해설", 20000), ("source", "출처명", 300),
         ("exam", "시험 / 회차", 200), ("original_question_number", "원본 문항 번호", 50),
         ("source_url", "출처 URL", 1000), ("summary", "수정 요약", 200),
@@ -527,7 +542,7 @@ def get_question_page_data():
             render_rich_html(strip_choice_label(choice))
             for choice in json.loads(question["choices"] or "[]")
         ]
-        for field in ("passage", "prompt", "examples", "answer", "explanation"):
+        for field in ("prompt", "answer", "explanation"):
             question[field] = render_rich_html(question[field])
         question["display_id"] = format_question_number(question["id"])
         questions.append(question)

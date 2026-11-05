@@ -102,7 +102,6 @@ def _validated_import(form):
             or not prompt.strip()
             or len(prompt) > 10000
             or not isinstance(answer, str)
-            or not answer.strip()
             or len(answer) > 2000
             or not isinstance(explanation, str)
             or len(explanation) > 10000

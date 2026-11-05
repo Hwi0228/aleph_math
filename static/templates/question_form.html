@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#F4F7FA">
   <title>{{ '문항 수정' if mode == 'edit' else '문항 작성' }} | HEXORA</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-question_form.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
@@ -136,53 +137,23 @@
               <span class="section-hint">서식 · 수식 · 이미지가 포함된 콘텐츠</span>
             </div>
             <div class="fields">
-              <label class="field full">지문 <span class="section-hint">선택 사항</span>
-                <div class="rich-field">
-                  <div class="rich-toolbar" data-toolbar="passage">
-                    <button class="tool-button" type="button" data-command="bold" aria-label="굵게">B</button>
-                    <button class="tool-button" type="button" data-command="italic" aria-label="기울임"><i>I</i></button>
-                    <button class="tool-button" type="button" data-command="underline" aria-label="밑줄"><u>U</u></button>
-                    <span class="tool-divider"></span>
-                    <button class="tool-button" type="button" data-command="bulletList" aria-label="글머리 목록">☷</button>
-                    <button class="tool-button" type="button" data-command="orderedList" aria-label="번호 목록">1.</button>
-                    <span class="tool-divider"></span>
-                    <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
-                    <button class="tool-button" type="button" data-math="block">∑ 블록</button>
-                  </div>
-                  <div class="rich-editor" data-editor="passage"></div>
-                  <textarea class="rich-source" name="passage" data-source="passage">{{ form_data.get('passage', '') }}</textarea>
-                  <div class="math-help">수식은 수식 버튼을 눌러 LaTeX로 입력할 수 있습니다.</div>
-                </div>
-              </label>
               <label class="field full">문제 내용 <span class="required">*</span>
                 <div class="rich-field">
                   <div class="rich-toolbar" data-toolbar="prompt">
-                    <button class="tool-button" type="button" data-command="bold" aria-label="굵게">B</button>
-                    <button class="tool-button" type="button" data-command="italic" aria-label="기울임"><i>I</i></button>
-                    <button class="tool-button" type="button" data-command="underline" aria-label="밑줄"><u>U</u></button>
+                    <button class="tool-button ql-bold" type="button" aria-label="굵게">B</button>
+                    <button class="tool-button ql-italic" type="button" aria-label="기울임"><i>I</i></button>
+                    <button class="tool-button ql-underline" type="button" aria-label="밑줄"><u>U</u></button>
                     <span class="tool-divider"></span>
-                    <button class="tool-button" type="button" data-command="bulletList" aria-label="글머리 목록">☷</button>
-                    <button class="tool-button" type="button" data-command="orderedList" aria-label="번호 목록">1.</button>
+                    <button class="tool-button ql-list" type="button" value="bullet" aria-label="글머리 목록">☷</button>
+                    <button class="tool-button ql-list" type="button" value="ordered" aria-label="번호 목록">1.</button>
                     <span class="tool-divider"></span>
-                    <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
-                    <button class="tool-button" type="button" data-math="block">∑ 블록</button>
+                    <button class="tool-button ql-inlineMath" type="button">∑ 수식</button>
+                    <button class="tool-button ql-blockMath" type="button">∑ 블록</button>
+                    <button class="tool-button ql-blockquote" type="button" title="선택한 문단을 보기 박스로 전환">▤ 보기</button>
                   </div>
                   <div class="rich-editor" data-editor="prompt"></div>
                   <textarea class="rich-source" name="prompt" data-source="prompt" required>{{ form_data.get('prompt', '') }}</textarea>
-                  <div class="math-help">수식 입력, 글머리, 문단 서식을 사용해 문제를 완성하세요.</div>
-                </div>
-              </label>
-              <label class="field full">보기 <span class="section-hint">선택 사항</span>
-                <div class="rich-field">
-                  <div class="rich-toolbar" data-toolbar="examples">
-                    <button class="tool-button" type="button" data-command="bold">B</button>
-                    <button class="tool-button" type="button" data-command="italic"><i>I</i></button>
-                    <span class="tool-divider"></span>
-                    <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
-                    <button class="tool-button" type="button" data-math="block">∑ 블록</button>
-                  </div>
-                  <div class="rich-editor" data-editor="examples"></div>
-                  <textarea class="rich-source" name="examples" data-source="examples">{{ form_data.get('examples', '') }}</textarea>
+                  <div class="math-help">지문, 보기, 문제 본문을 이곳에 함께 작성할 수 있습니다. 수식은 LaTeX 문자열로 저장되고 문제 DB에서 렌더링됩니다.</div>
                 </div>
               </label>
               <label class="field full">선택지 <span class="choice-help">객관식 문항은 한 줄에 하나씩 입력 · 수식 LaTeX 지원</span>
@@ -200,12 +171,12 @@
               <label class="field full">정답 <span class="required">*</span>
                 <div class="rich-field">
                   <div class="rich-toolbar" data-toolbar="answer">
-                    <button class="tool-button" type="button" data-command="bold">B</button>
-                    <button class="tool-button" type="button" data-command="italic"><i>I</i></button>
-                    <button class="tool-button" type="button" data-command="underline"><u>U</u></button>
+                    <button class="tool-button ql-bold" type="button">B</button>
+                    <button class="tool-button ql-italic" type="button"><i>I</i></button>
+                    <button class="tool-button ql-underline" type="button"><u>U</u></button>
                     <span class="tool-divider"></span>
-                    <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
-                    <button class="tool-button" type="button" data-math="block">∑ 블록</button>
+                    <button class="tool-button ql-inlineMath" type="button">∑ 수식</button>
+                    <button class="tool-button ql-blockMath" type="button">∑ 블록</button>
                   </div>
                   <div class="rich-editor answer-editor" data-editor="answer"></div>
                   <textarea class="rich-source answer-source" name="answer" data-source="answer" required>{{ form_data.get('answer', '') }}</textarea>
@@ -222,19 +193,19 @@
             </div>
             <div class="rich-field">
               <div class="rich-toolbar" data-toolbar="explanation">
-                <button class="tool-button" type="button" data-command="bold">B</button>
-                <button class="tool-button" type="button" data-command="italic"><i>I</i></button>
-                <button class="tool-button" type="button" data-command="underline"><u>U</u></button>
+                <button class="tool-button ql-bold" type="button">B</button>
+                <button class="tool-button ql-italic" type="button"><i>I</i></button>
+                <button class="tool-button ql-underline" type="button"><u>U</u></button>
                 <span class="tool-divider"></span>
-                <button class="tool-button" type="button" data-command="bulletList">☷</button>
-                <button class="tool-button" type="button" data-command="orderedList">1.</button>
+                <button class="tool-button ql-list" type="button" value="bullet">☷</button>
+                <button class="tool-button ql-list" type="button" value="ordered">1.</button>
                 <span class="tool-divider"></span>
-                <button class="tool-button" type="button" data-math="inline">∑ 수식</button>
-                <button class="tool-button" type="button" data-math="block">∑ 블록</button>
+                <button class="tool-button ql-inlineMath" type="button">∑ 수식</button>
+                <button class="tool-button ql-blockMath" type="button">∑ 블록</button>
               </div>
               <div class="rich-editor explanation-editor" data-editor="explanation"></div>
               <textarea class="rich-source explanation-source" name="explanation" data-source="explanation">{{ form_data.get('explanation', '') }}</textarea>
-              <div class="math-help">풀이 과정과 수식을 문서처럼 작성할 수 있습니다.</div>
+              <div class="math-help">풀이와 수식을 일반 텍스트처럼 함께 편집할 수 있습니다.</div>
             </div>
           </section>
 
@@ -298,197 +269,228 @@
     </main>
   </div>
 
+  <div class="math-dialog-backdrop" id="math-input-dialog" hidden>
+    <section class="math-dialog" role="dialog" aria-modal="true" aria-labelledby="math-dialog-title">
+      <form id="math-input-form">
+        <h2 id="math-dialog-title">LaTeX 수식 입력</h2>
+        <label for="math-latex-input">수식 코드</label>
+        <input id="math-latex-input" type="text" autocomplete="off" spellcheck="false"
+               placeholder="예: \\frac{1}{2} 또는 x^2 + 1">
+        <p>LaTeX 문법으로 입력하세요. 예: \\sqrt{x}, \\frac{a}{b}</p>
+        <div class="math-dialog-actions">
+          <button class="button" id="math-input-cancel" type="button">취소</button>
+          <button class="button primary" type="submit">삽입</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
-  <script type="module">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <script>
     const form = document.getElementById("question-form");
     const sources = Array.from(document.querySelectorAll("[data-source]"));
     const editors = new Map();
+    sources.forEach((source) => {
+      source.dataset.originalRequired = source.hasAttribute("required") ? "true" : "false";
+    });
 
     try {
-      const [{ Editor, Node }, { default: StarterKit }] = await Promise.all([
-        import("https://cdn.jsdelivr.net/npm/@tiptap/core@3.30.3/+esm"),
-        import("https://cdn.jsdelivr.net/npm/@tiptap/starter-kit@3.30.3/+esm")
-      ]);
-
-      function createMathNodeView(type, initialNode, editor, getPos) {
-        let currentNode = initialNode;
-        const isInline = type === "inline-math";
-        const dom = document.createElement(isInline ? "span" : "div");
-        dom.classList.add(
-          "tiptap-mathematics-render",
-          isInline ? "tiptap-math-inline" : "tiptap-math-block"
-        );
-        dom.dataset.type = type;
-        dom.contentEditable = "false";
-
-        function renderMath() {
-          const latex = String(currentNode.attrs.latex || "");
-          dom.dataset.latex = latex;
-          dom.replaceChildren();
-          if (window.katex && latex) {
-            try {
-              window.katex.render(latex, dom, {
-                throwOnError: false,
-                displayMode: !isInline
-              });
-              return;
-            } catch (error) {
-              console.warn("Could not render the formula in the editor.", error);
-            }
-          }
-          dom.textContent = latex || "수식";
+      if (!window.Quill) throw new Error("Quill 2 CDN script did not load.");
+      const Delta = Quill.import("delta");
+      const InlineEmbed = Quill.import("blots/embed");
+      const BlockEmbed = Quill.import("blots/block/embed");
+      function renderMath(node, latex, displayMode) {
+        node.dataset.latex = latex;
+        node.dataset.mathObject = displayMode ? "block" : "inline";
+        node.setAttribute("contenteditable", "false");
+        node.setAttribute("aria-label", displayMode ? "블록 수식" : "인라인 수식");
+        if (window.katex) {
+          window.katex.render(latex, node, { throwOnError: false, displayMode });
+        } else {
+          node.textContent = latex;
         }
+      }
 
-        dom.addEventListener("dblclick", () => {
-          if (!editor.isEditable) return;
-          const nextLatex = window.prompt(
-            "LaTeX 수식을 입력하세요.",
-            currentNode.attrs.latex || ""
-          );
-          if (nextLatex === null) return;
-          let position;
-          try {
-            position = getPos();
-          } catch (error) {
-            return;
-          }
-          if (typeof position !== "number") return;
-          const transaction = editor.state.tr.setNodeMarkup(
-            position,
-            undefined,
-            { ...currentNode.attrs, latex: nextLatex.trim() }
-          );
-          editor.view.dispatch(transaction);
-          editor.commands.focus();
+      class InlineMathBlot extends InlineEmbed {
+        static blotName = "inlineMath";
+        static tagName = "span";
+        static className = "ql-math-inline";
+        static create(value) {
+          const node = super.create();
+          renderMath(node, String(value || ""), false);
+          return node;
+        }
+        static value(node) { return node.dataset.latex || ""; }
+      }
+
+      class BlockMathBlot extends BlockEmbed {
+        static blotName = "blockMath";
+        static tagName = "div";
+        static className = "ql-math-block";
+        static create(value) {
+          const node = super.create();
+          renderMath(node, String(value || ""), true);
+          return node;
+        }
+        static value(node) { return node.dataset.latex || ""; }
+      }
+
+      Quill.register(InlineMathBlot, true);
+      Quill.register(BlockMathBlot, true);
+
+
+      const mathDialog = document.getElementById("math-input-dialog");
+      const mathDialogForm = document.getElementById("math-input-form");
+      const mathInput = document.getElementById("math-latex-input");
+      const mathCancel = document.getElementById("math-input-cancel");
+      let mathDialogAction = null;
+
+      function closeMathDialog() {
+        mathDialog.hidden = true;
+        mathDialogAction = null;
+      }
+
+      function openMathDialog(initialValue, action) {
+        mathInput.value = initialValue || "";
+        mathDialogAction = action;
+        mathDialog.hidden = false;
+        requestAnimationFrame(() => {
+          mathInput.focus();
+          mathInput.select();
         });
+      }
 
-        renderMath();
-        return {
-          dom,
-          update(nextNode) {
-            if (nextNode.type !== currentNode.type) return false;
-            currentNode = nextNode;
-            renderMath();
-            return true;
-          },
-          stopEvent(event) {
-            return event.type === "dblclick";
-          },
-          ignoreMutation() {
-            return true;
-          }
+      mathDialogForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const latex = mathInput.value.trim();
+        if (!latex) {
+          mathInput.setCustomValidity("LaTeX 수식을 입력해 주세요.");
+          mathInput.reportValidity();
+          return;
+        }
+        mathInput.setCustomValidity("");
+        const action = mathDialogAction;
+        closeMathDialog();
+        if (action) action(latex);
+      });
+      mathInput.addEventListener("input", () => mathInput.setCustomValidity(""));
+      mathCancel.addEventListener("click", closeMathDialog);
+      mathDialog.addEventListener("click", (event) => {
+        if (event.target === mathDialog) closeMathDialog();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !mathDialog.hidden) closeMathDialog();
+      });
+
+      function insertMath(format) {
+        const quill = this.quill;
+        const range = quill.getSelection(true) || {
+          index: Math.max(0, quill.getLength() - 1), length: 0
         };
-      }
-
-      function createMathNode(type, tag) {
-        return Node.create({
-          name: type === "inline-math" ? "inlineMath" : "blockMath",
-          group: type === "inline-math" ? "inline" : "block",
-          inline: type === "inline-math",
-          atom: true,
-          selectable: true,
-          addAttributes() {
-            return {
-              latex: {
-                default: "",
-                parseHTML: element => element.getAttribute("data-latex") || "",
-                renderHTML: attributes => ({
-                  "data-latex": attributes.latex || ""
-                })
-              }
-            };
-          },
-          parseHTML() {
-            return [{ tag: tag + '[data-type="' + type + '"]' }];
-          },
-          renderHTML({ node, HTMLAttributes }) {
-            const delimiters = type === "inline-math"
-              ? ["\\(", "\\)"]
-              : ["\\[", "\\]"];
-            return [
-              tag,
-              { ...HTMLAttributes, "data-type": type },
-              delimiters[0] + node.attrs.latex + delimiters[1]
-            ];
-          },
-          addNodeView() {
-            return ({ node, editor, getPos }) =>
-              createMathNodeView(type, node, editor, getPos);
-          }
+        openMathDialog("", (latex) => {
+          quill.focus();
+          if (range.length) quill.deleteText(range.index, range.length, "user");
+          const index = range.index;
+          quill.insertEmbed(index, format, latex, "user");
+          quill.setSelection(index + 1, 0, "silent");
         });
       }
-
-      const extensions = [
-        StarterKit,
-        createMathNode("inline-math", "span"),
-        createMathNode("block-math", "div")
-      ];
 
       sources.forEach((source) => {
         const key = source.dataset.source;
         const mount = document.querySelector('[data-editor="' + key + '"]');
-        const editor = new Editor({
-          element: mount,
-          extensions,
-          content: source.value || "<p></p>",
-          editorProps: {
-            attributes: {
-              class: "tiptap",
-              "aria-label": key + " 편집기"
-            }
-          },
-          onUpdate: ({ editor: current }) => {
-            source.value = current.getHTML();
+        const toolbar = document.querySelector('[data-toolbar="' + key + '"]');
+        if (!mount || !toolbar) throw new Error("Missing editor mount or toolbar: " + key);
+        const quill = new Quill(mount, {
+          theme: "snow",
+          placeholder: "내용을 입력하세요.",
+          modules: {
+            toolbar: {
+              container: toolbar,
+              handlers: {
+                inlineMath: function () { insertMath.call(this, "inlineMath"); },
+                blockMath: function () { insertMath.call(this, "blockMath"); }
+              }
+            },
+            history: { delay: 1000, maxStack: 100, userOnly: true }
           }
         });
-        source.required = false;
-        editors.set(key, editor);
-      });
 
-      document.documentElement.classList.add("js-editor-ready");
-      sources.forEach((source) => { source.required = false; });
+        function legacyMathEmbed(node, displayMode) {
+          const latex = node.getAttribute("data-latex") ||
+            node.getAttribute("data-tex") || node.textContent || "";
+          return new Delta().insert(displayMode
+            ? { blockMath: latex.trim() }
+            : { inlineMath: latex.trim() }).concat(
+              displayMode ? new Delta().insert("\\n") : new Delta()
+            );
+        }
 
-      document.querySelectorAll("[data-toolbar]").forEach((toolbar) => {
-        const editor = editors.get(toolbar.dataset.toolbar);
-        toolbar.querySelectorAll("button").forEach((button) => {
-          button.addEventListener("click", () => {
-            const command = button.dataset.command;
-            if (command === "bold") editor.chain().focus().toggleBold().run();
-            if (command === "italic") editor.chain().focus().toggleItalic().run();
-            if (command === "underline") editor.chain().focus().toggleUnderline().run();
-            if (command === "bulletList") editor.chain().focus().toggleBulletList().run();
-            if (command === "orderedList") editor.chain().focus().toggleOrderedList().run();
+        // Preserve math as a single object when copying/pasting within Quill.
+        quill.clipboard.addMatcher("span.ql-math-inline", (node) =>
+          legacyMathEmbed(node, false));
+        quill.clipboard.addMatcher("div.ql-math-block", (node) =>
+          legacyMathEmbed(node, true));
 
-            const math = button.dataset.math;
-            if (math) {
-              const latex = window.prompt("LaTeX 수식을 입력하세요.", "");
-              if (latex === null || !latex.trim()) return;
-              editor.chain().focus().insertContent({
-                type: math === "inline" ? "inlineMath" : "blockMath",
-                attrs: { latex: latex.trim() }
-              }).run();
-            }
+        // Migrate previously stored TipTap math nodes into native Quill math objects.
+        quill.clipboard.addMatcher('span[data-type="inline-math"]', (node) =>
+          legacyMathEmbed(node, false));
+        quill.clipboard.addMatcher('div[data-type="block-math"]', (node) =>
+          legacyMathEmbed(node, true));
+        const initialHtml = source.value.trim();
+        if (initialHtml) quill.setContents(quill.clipboard.convert({ html: initialHtml }), "silent");
+        quill.on("text-change", () => { source.value = quill.root.innerHTML; });
+
+        mount.addEventListener("dblclick", (event) => {
+          const mathNode = event.target.closest(".ql-math-inline, .ql-math-block");
+          if (!mathNode || !mount.contains(mathNode)) return;
+          const blot = Quill.find(mathNode);
+          if (!blot) return;
+          const index = quill.getIndex(blot);
+          const format = mathNode.classList.contains("ql-math-block") ? "blockMath" : "inlineMath";
+          openMathDialog(mathNode.dataset.latex || "", (nextLatex) => {
+            quill.focus();
+            quill.deleteText(index, 1, "user");
+            quill.insertEmbed(index, format, nextLatex, "user");
+            quill.setSelection(index + 1, 0, "silent");
           });
         });
+
+        editors.set(key, quill);
       });
 
-      form.addEventListener("submit", () => {
-        editors.forEach((editor, key) => {
-          const source = document.querySelector('[data-source="' + key + '"]');
-          source.value = editor.getHTML();
+      sources.forEach((source) => { source.required = false; });
+      document.documentElement.classList.add("js-editor-ready");
+      form.addEventListener("submit", (event) => {
+        sources.forEach((source) => {
+          const editor = editors.get(source.dataset.source);
+          if (editor) source.value = editor.root.innerHTML;
         });
+        if (event.submitter && event.submitter.value === "draft") return;
+        const missing = ["prompt", "answer"].find((key) => {
+          const editor = editors.get(key);
+          return editor && !editor.getText().trim() &&
+            !editor.root.querySelector(".ql-math-inline, .ql-math-block");
+        });
+        if (missing) {
+          event.preventDefault();
+          window.alert(missing === "prompt" ? "문제 내용을 입력해 주세요." : "정답을 입력해 주세요.");
+          editors.get(missing).focus();
+        }
       });
     } catch (error) {
-      console.error("WYSIWYG editor unavailable; using plain text fallback.", error);
-      document.querySelectorAll(".rich-editor").forEach((editor) => {
-        editor.hidden = true;
+      console.error("Quill WYSIWYG editor unavailable; using text fallback.", error);
+      document.documentElement.classList.remove("js-editor-ready");
+      document.querySelectorAll(".rich-editor, .rich-toolbar").forEach((element) => {
+        element.hidden = true;
       });
-      document.querySelectorAll(".rich-toolbar").forEach((toolbar) => {
-        toolbar.hidden = true;
+      sources.forEach((source) => {
+        source.required = source.dataset.originalRequired === "true";
       });
     }
 
-    const curriculum = document.getElementById("curriculum-select");
+        const curriculum = document.getElementById("curriculum-select");
     const course = document.getElementById("course-select");
     const unit = document.getElementById("unit-input");
     const standards = document.getElementById("achievement-standard");
@@ -570,15 +572,6 @@
       loadStandards(false);
     });
     unit.addEventListener("change", () => loadStandards(true));
-
-    form.addEventListener("submit", (event) => {
-      const submitter = event.submitter;
-      if (submitter && submitter.value === "draft") return;
-      sources.forEach((source) => {
-        const editor = editors.get(source.dataset.source);
-        if (editor) source.value = editor.getHTML();
-      });
-    });
   </script>
 </body>
 </html>

@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "VERSION"
+      - "CHANGELOG.md"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release metadata
+        id: release
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          version = Path("VERSION").read_text(encoding="utf-8").strip()
+          if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?", version):
+              raise SystemExit(f"VERSION is not valid SemVer: {version!r}")
+
+          before = os.environ.get("BEFORE_SHA", "")
+          previous_version = ""
+          if before and before != "0" * 40:
+              previous = subprocess.run(
+                  ["git", "show", f"{before}:VERSION"],
+                  check=False,
+                  capture_output=True,
+                  text=True,
+              )
+              if previous.returncode == 0:
+                  previous_version = previous.stdout.strip()
+
+          output_path = os.environ["GITHUB_OUTPUT"]
+          if version == previous_version:
+              print(f"VERSION stayed at {version}; skipping release.")
+              with open(output_path, "a", encoding="utf-8") as output:
+                  output.write("should_publish=false\n")
+              raise SystemExit(0)
+
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          heading = re.search(rf"(?m)^## \[{re.escape(version)}\][^\n]*(?:\n|$)", changelog)
+          if heading is None:
+              raise SystemExit(f"CHANGELOG.md has no section for version {version}")
+
+          remaining = changelog[heading.end():]
+          next_heading = re.search(r"(?m)^## \[", remaining)
+          notes = remaining[:next_heading.start() if next_heading else len(remaining)].strip()
+          if not notes:
+              raise SystemExit(f"CHANGELOG.md section for {version} is empty")
+
+          Path("release-notes.md").write_text(notes + "\n", encoding="utf-8")
+          with open(output_path, "a", encoding="utf-8") as output:
+              output.write(f"version={version}\n")
+              output.write("should_publish=true\n")
+          print(f"Prepared release v{version}.")
+          PY
+
+      - name: Create GitHub Release
+        if: steps.release.outputs.should_publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          tag="v${VERSION}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; skipping duplicate."
+            exit 0
+          fi
+          gh release create "$tag" --target "$GITHUB_SHA" --title "HEXORA $tag" --notes-file release-notes.md
