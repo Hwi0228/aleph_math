@@ -2,6 +2,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 import uuid
 from pathlib import Path
 
@@ -1007,3 +1008,59 @@ class HexoraBrandingTests(unittest.TestCase):
         readme = (root / "README.md").read_text(encoding="utf-8")
         self.assertIn("# HEXORA (헥소라)", readme)
 
+
+
+
+class ChangelogPageTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+
+        self.temp_directory = tempfile.TemporaryDirectory()
+        self.original_database = app.config["DATABASE"]
+        app.config.update(
+            TESTING=True,
+            DATABASE=str(Path(self.temp_directory.name) / "changelog.sqlite3"),
+            SECRET_KEY="changelog-test-secret",
+        )
+        self.client = app.test_client()
+
+        self.client.get("/signup")
+        with self.client.session_transaction() as session:
+            csrf = session["csrf_token"]
+        response = self.client.post(
+            "/signup",
+            data={
+                "_csrf_token": csrf,
+                "email": "changelog@example.com",
+                "display_name": "변경 이력 테스트",
+                "password": "long-test-password",
+                "password_confirm": "long-test-password",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def tearDown(self):
+        app.config["DATABASE"] = self.original_database
+        self.temp_directory.cleanup()
+
+    def test_changelog_requires_login(self):
+        client = app.test_client()
+        response = client.get("/changelog")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response.headers["Location"])
+
+    def test_changelog_page_renders_release_notes_and_github_source_link(self):
+        with patch("changelog_routes._fetch_remote_changelog", side_effect=OSError("offline")):
+            response = self.client.get("/changelog")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("v0.1.2", html)
+        self.assertIn("GitHub CHANGELOG.md", html)
+        self.assertIn(
+            "https://github.com/Hwi0228/hexora/blob/release/0.1.2/CHANGELOG.md",
+            html,
+        )
+        self.assertIn("PostgreSQL", html)
+        self.assertIn("변경 이력", html)

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f7fa">
+  <title>변경 이력 | HEXORA</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/changelog.css') }}">
+</head>
+<body>
+  <div class="app app-standard">
+    {% include "partials/sidebar.html" %}
+
+    <main class="main-area">
+      <div class="content changelog-main">
+        {% set header_section = "PROJECT" %}
+        {% set header_title = "변경 이력" %}
+        {% set header_description = "HEXORA의 버전별 업데이트와 주요 변경 사항을 확인합니다." %}
+        {% include "partials/header.html" %}
+
+        <section class="changelog-intro">
+          <div class="changelog-intro-copy">
+            <div class="eyebrow">RELEASE NOTES · HEXORA</div>
+            <h2>만들고 개선한 기록</h2>
+            <p>새로운 기능, 사용성 개선, 수정 사항을 버전별로 정리했습니다.</p>
+          </div>
+          <a class="site-button changelog-github-link" href="{{ github_changelog_url }}" target="_blank" rel="noopener noreferrer">
+            GitHub CHANGELOG.md <span aria-hidden="true">↗</span>
+          </a>
+        </section>
+
+        <div class="changelog-sync" role="status">
+          <span class="changelog-sync-dot{% if changelog_source != 'github' %} is-local{% endif %}" aria-hidden="true"></span>
+          {% if changelog_source == "github" %}
+          GitHub의 변경 이력을 표시하고 있습니다.
+          {% else %}
+          GitHub 원본을 현재 버전까지 확인할 수 없어 배포된 CHANGELOG.md를 표시하고 있습니다.
+          {% endif %}
+        </div>
+
+        {% if releases %}
+        <div class="changelog-release-list">
+          {% for release in releases %}
+          <article class="changelog-release">
+            <header class="changelog-release-header">
+              <div class="changelog-release-version">
+                <span class="changelog-version-label">VERSION</span>
+                <h2>v{{ release.version }}</h2>
+              </div>
+              {% if release.date %}<time>{{ release.date }}</time>{% endif %}
+            </header>
+
+            {% if release.sections %}
+            <div class="changelog-release-sections">
+              {% for section in release.sections %}
+              <section class="changelog-section">
+                <h3>{{ section.title }}</h3>
+                {% if section.items %}
+                <ul>
+                  {% for item in section.items %}
+                  <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+                {% endif %}
+              </section>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <section class="changelog-empty">
+          <h2>변경 이력을 불러오지 못했습니다.</h2>
+          <p>GitHub에서 원본 변경 이력을 확인해 주세요.</p>
+          <a class="site-button" href="{{ github_changelog_url }}" target="_blank" rel="noopener noreferrer">GitHub에서 보기 ↗</a>
+        </section>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</body>
+</html>

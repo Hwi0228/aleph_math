@@ -147,6 +147,10 @@ Neon에서는 웹 앱의 일반 쿼리용 pooled connection string을 DATABASE_U
 
 Render 배포 명령은 Build Command: pip install -r requirements.txt, Start Command: gunicorn app:app을 사용합니다. FLASK_SECRET_KEY도 Render 환경 변수에 고정해 두어야 합니다.
 
+### 변경 이력 페이지
+
+로그인 후 사이드바의 **변경 이력** 또는 `/changelog`에서 버전별 변경 사항을 확인할 수 있습니다. 페이지는 GitHub 저장소의 `CHANGELOG.md`를 기준으로 표시하며, GitHub 원문으로 이동하는 링크도 제공합니다. 기본적으로 현재 앱 버전에 대응하는 `release/<VERSION>` 브랜치를 먼저 확인하고, 해당 버전이 없으면 `master`를 조회합니다. Render 환경 변수 `CHANGELOG_GITHUB_REF`를 설정하면 조회 브랜치를 직접 지정할 수 있습니다. GitHub에 현재 실행 버전의 변경 이력이 아직 반영되지 않았거나 GitHub에 연결할 수 없으면 배포된 코드에 포함된 `CHANGELOG.md`를 대신 표시합니다.
+
 ### 공개 서비스 주소
 
 HEXORA 공개 서비스는 다음 주소에서 이용할 수 있습니다.

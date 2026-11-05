@@ -6,6 +6,7 @@
 
 ### Added
 - DATABASE_TYPE 환경 변수로 SQLite와 PostgreSQL 중 사용할 데이터베이스를 선택하는 백엔드 설정 추가
+- GitHub CHANGELOG.md와 연동되는 앱 내 변경 이력 페이지 및 사이드바 메뉴 추가
 - 기존 SQLite 경로와 자동 마이그레이션을 유지하면서 psycopg 3 기반 PostgreSQL 연결 어댑터 추가
 - PostgreSQL에서 회원, 폴더, 문제, 수정 이력, 임시 저장, 개인 메모 테이블과 인덱스 자동 생성
 - Render 배포용 Gunicorn 의존성과 Procfile 추가
