@@ -1059,7 +1059,7 @@ class ChangelogPageTests(unittest.TestCase):
         self.assertIn("v0.1.2", html)
         self.assertIn("GitHub CHANGELOG.md", html)
         self.assertIn(
-            "https://github.com/Hwi0228/hexora/blob/release/0.1.2/CHANGELOG.md",
+            "https://github.com/Hwi0228/hexora/blob/master/CHANGELOG.md",
             html,
         )
         self.assertIn("PostgreSQL", html)

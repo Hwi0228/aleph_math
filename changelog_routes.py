@@ -38,53 +38,36 @@ def _read_local_changelog():
 
 
 def _load_changelog():
-    explicit_ref = os.environ.get("CHANGELOG_GITHUB_REF", "").strip()
+    ref = os.environ.get("CHANGELOG_GITHUB_REF", "master").strip() or "master"
     version_path = Path(__file__).resolve().parent / "VERSION"
     try:
         current_version = version_path.read_text(encoding="utf-8").strip()
     except OSError:
         current_version = ""
-
-    if explicit_ref:
-        refs = [explicit_ref]
-    elif current_version:
-        refs = [f"release/{current_version}", "master"]
-    else:
-        refs = ["master"]
-
-    cache_key = (tuple(refs), current_version)
+    cache_key = (ref, current_version)
     now = time.monotonic()
 
     with _CACHE_LOCK:
         cached = _CACHE.get(cache_key)
         if cached and now - cached["fetched_at"] < CACHE_SECONDS:
-            return cached["markdown"], cached["source"], cached["ref"]
+            return cached["markdown"], cached["source"]
 
-        markdown = None
-        source = "local"
-        selected_ref = refs[0]
-        for candidate_ref in refs:
-            try:
-                remote_markdown = _fetch_remote_changelog(candidate_ref)
-                if current_version and f"## [{current_version}]" not in remote_markdown:
-                    continue
-                markdown = remote_markdown
-                source = "github"
-                selected_ref = candidate_ref
-                break
-            except (OSError, URLError, TimeoutError, UnicodeError):
-                continue
-
-        if markdown is None:
+        try:
+            markdown = _fetch_remote_changelog(ref)
+            if current_version and f"## [{current_version}]" not in markdown:
+                raise ValueError("GitHub changelog does not include the running version.")
+            source = "github"
+        except (OSError, URLError, TimeoutError, UnicodeError, ValueError):
             markdown = _read_local_changelog()
+            source = "local"
 
         _CACHE[cache_key] = {
             "markdown": markdown,
             "source": source,
-            "ref": selected_ref,
             "fetched_at": now,
         }
-        return markdown, source, selected_ref
+        return markdown, source
+
 
 def _parse_changelog(markdown):
     releases = []
@@ -120,7 +103,8 @@ def _parse_changelog(markdown):
 
 
 def changelog():
-    markdown, source, ref = _load_changelog()
+    markdown, source = _load_changelog()
+    ref = os.environ.get("CHANGELOG_GITHUB_REF", "master").strip() or "master"
     github_url = (
         f"https://github.com/{GITHUB_REPOSITORY}/blob/"
         f"{quote(ref, safe='/-._')}/CHANGELOG.md"
