@@ -22,6 +22,7 @@ class VersionMetadataTests(unittest.TestCase):
         self.assertIn("gh release create", workflow)
         self.assertIn(r'fullmatch(r"\d+\.\d+\.\d+', workflow)
         self.assertIn(r'output.write("should_publish=false\n")', workflow)
+        self.assertIn("remaining = changelog[heading.end():]", workflow)
 
     def test_sidebar_displays_version_from_the_version_file(self):
         root = Path(__file__).resolve().parents[1]
