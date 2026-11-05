@@ -54,7 +54,7 @@ jobs:
               raise SystemExit(0)
 
           changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
-          heading = re.search(rf"(?m)^## \[{re.escape(version)}\](?:\s|$)", changelog)
+          heading = re.search(rf"(?m)^## \[{re.escape(version)}\][^\n]*(?:\n|$)", changelog)
           if heading is None:
               raise SystemExit(f"CHANGELOG.md has no section for version {version}")
 
