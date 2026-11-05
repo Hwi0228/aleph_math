@@ -2,7 +2,7 @@
 
 이 프로젝트는 Semantic Versioning을 따릅니다.
 
-## [0.2.0] - 2026-11-05
+## [0.1.2] - 2026-11-05
 
 ### Added
 - DATABASE_TYPE 환경 변수로 SQLite와 PostgreSQL 중 사용할 데이터베이스를 선택하는 백엔드 설정 추가
