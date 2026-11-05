@@ -635,7 +635,8 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(question_response.status_code, 200)
         self.assertIn("$x^2 + 1$".encode(), question_response.data)
         self.assertIn("$$y = x + 2$$".encode(), question_response.data)
-        self.assertIn(b"renderMathInElement(document.body", question_response.data)
+        self.assertIn(b"window.renderMathInElement", question_response.data)
+        self.assertIn(b'document.querySelectorAll(".math-content")', question_response.data)
 
     def test_question_text_is_html_escaped(self):
         self.csrf_post(
