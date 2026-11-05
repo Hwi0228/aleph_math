@@ -2,6 +2,24 @@
 
 이 프로젝트는 Semantic Versioning을 따릅니다.
 
+## [0.2.0] - 2026-11-05
+
+### Added
+- DATABASE_TYPE 환경 변수로 SQLite와 PostgreSQL 중 사용할 데이터베이스를 선택하는 백엔드 설정 추가
+- 기존 SQLite 경로와 자동 마이그레이션을 유지하면서 psycopg 3 기반 PostgreSQL 연결 어댑터 추가
+- PostgreSQL에서 회원, 폴더, 문제, 수정 이력, 임시 저장, 개인 메모 테이블과 인덱스 자동 생성
+- Render 배포용 Gunicorn 의존성과 Procfile 추가
+- SQLite 기본 설정 및 Neon PostgreSQL 설정 예제를 제공하는 .env.example 추가
+
+### Changed
+- DB 연결 초기화와 SQL 파라미터 바인딩을 백엔드별로 분기해 기존 라우트 로직을 공통으로 사용
+- 자동 증가 ID 반환, 중복 수정 이력 무시, 문자열 정렬, 회원 가입 트랜잭션을 SQLite·PostgreSQL 양쪽에 맞게 처리
+- README에 DB 선택, Neon pooled connection string, Render 환경 변수 및 데이터 이관 주의 사항 문서화
+
+### Compatibility
+- 기본값은 SQLite이므로 기존 로컬 개발 환경과 SQLite 데이터 파일은 계속 사용 가능
+- PostgreSQL 전환은 별도 저장소를 선택하는 동작이며 SQLite 데이터 자동 복사는 수행하지 않음
+
 ## [0.1.1] - 2026-11-05
 
 ### Added

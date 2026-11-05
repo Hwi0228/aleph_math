@@ -26,7 +26,24 @@ def _secret_key(app):
 
 def create_app():
     app = Flask(__name__, template_folder="static/templates")
-    app.config["DATABASE"] = os.path.join(app.instance_path, "probocr.sqlite3")
+    database_type = os.environ.get("DATABASE_TYPE", "sqlite").strip().lower()
+    if database_type == "postgres":
+        database_type = "postgresql"
+    if database_type not in {"sqlite", "postgresql"}:
+        raise ValueError("DATABASE_TYPE must be 'sqlite' or 'postgresql'.")
+
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    if database_type == "postgresql" and not database_url:
+        raise RuntimeError(
+            "DATABASE_TYPE=postgresql requires a DATABASE_URL environment variable."
+        )
+
+    app.config["DATABASE_TYPE"] = database_type
+    app.config["DATABASE_URL"] = database_url
+    app.config["DATABASE"] = os.environ.get(
+        "DATABASE_PATH",
+        os.path.join(app.instance_path, "probocr.sqlite3"),
+    )
     app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY")
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"

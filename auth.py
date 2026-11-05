@@ -1,6 +1,5 @@
 import hmac
 import secrets
-import sqlite3
 import uuid
 from functools import wraps
 from urllib.parse import urlsplit
@@ -8,7 +7,7 @@ from urllib.parse import urlsplit
 from flask import abort, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from database import close_db, get_db
+from database import begin_write_transaction, close_db, get_db, is_integrity_error
 
 
 def csrf_token():
@@ -115,7 +114,7 @@ def signup():
     connection = get_db()
     user_uuid = str(uuid.uuid4())
     try:
-        connection.execute("BEGIN IMMEDIATE")
+        begin_write_transaction(connection, lock_table="users")
         is_first_user = (
             connection.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
         )
@@ -142,8 +141,10 @@ def signup():
                 (user_uuid,),
             )
         connection.commit()
-    except sqlite3.IntegrityError:
+    except Exception as exc:
         connection.rollback()
+        if not is_integrity_error(exc):
+            raise
         if connection.execute(
             "SELECT 1 FROM users WHERE email = ?", (email,)
         ).fetchone() is None:
@@ -154,9 +155,6 @@ def signup():
             ["이미 가입된 이메일입니다."],
             409,
         )
-    except Exception:
-        connection.rollback()
-        raise
 
     session.clear()
     session["user_uuid"] = user_uuid

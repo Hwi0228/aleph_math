@@ -141,7 +141,7 @@ def _validated_import(form):
 
 def _render_page(questions=None, result_json=None, error=None, form_data=None):
     folders = get_db().execute(
-        "SELECT uuid, name FROM folders WHERE user_uuid = ? ORDER BY name COLLATE NOCASE, uuid",
+        "SELECT uuid, name FROM folders WHERE user_uuid = ? ORDER BY LOWER(name), uuid",
         (g.user["uuid"],),
     ).fetchall()
     return render_template(
@@ -193,6 +193,7 @@ def hwp_parser_page():
                                 source_type, license
                             )
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            RETURNING id
                             """,
                             (
                                 g.user["uuid"], None, metadata["subject"],
@@ -204,7 +205,7 @@ def hwp_parser_page():
                                 metadata["source_type"], metadata["license"],
                             ),
                         )
-                        question_id = cursor.lastrowid
+                        question_id = cursor.fetchone()["id"]
                         snapshot = {
                             "title": "",
                             "subject": metadata["subject"],

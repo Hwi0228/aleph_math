@@ -8,7 +8,7 @@ from flask import abort, g, jsonify, redirect, render_template, request, url_for
 
 from auth import admin_required, login_required
 from constants import NAV_ITEMS, SUBJECTS
-from database import get_db
+from database import begin_write_transaction, get_db
 from parse_hwp import normalize_katex_markup, strip_choice_label
 
 QUESTION_CONTENT_FIELDS = (
@@ -407,7 +407,7 @@ def get_folder_data(subject, owner_uuid):
         SELECT uuid, name, parent_uuid
         FROM folders
         WHERE user_uuid = ?
-        ORDER BY name COLLATE NOCASE, uuid
+        ORDER BY LOWER(name), uuid
         """,
         (owner_uuid,),
     ).fetchall()
@@ -716,11 +716,12 @@ def _ensure_initial_question_revision(connection, question):
     snapshot = _question_snapshot(question)
     connection.execute(
         """
-        INSERT OR IGNORE INTO question_revisions (
+        INSERT INTO question_revisions (
             question_id, revision_number, editor_uuid, summary,
             snapshot_json, created_at
         )
         VALUES (?, 1, ?, ?, ?, ?)
+        ON CONFLICT (question_id, revision_number) DO NOTHING
         """,
         (
             question["id"],
@@ -793,7 +794,7 @@ def new_question():
 
     connection = get_db()
     try:
-        connection.execute("BEGIN IMMEDIATE")
+        begin_write_transaction(connection)
         cursor = connection.execute(
             """
             INSERT INTO questions (
@@ -804,6 +805,7 @@ def new_question():
                 source_url, license, title
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
             """,
             (
                 g.user["uuid"], data["folder_uuid"], data["subject"], data["grade"],
@@ -816,7 +818,7 @@ def new_question():
                 data["source_url"], data["license"], data["title"],
             ),
         )
-        question_id = cursor.lastrowid
+        question_id = cursor.fetchone()["id"]
         question = connection.execute(
             "SELECT * FROM questions WHERE id = ?", (question_id,)
         ).fetchone()
@@ -836,7 +838,7 @@ def edit_question(question_id):
     question = _question_row(question_id)
     connection = get_db()
     if request.method == "GET":
-        connection.execute("BEGIN IMMEDIATE")
+        begin_write_transaction(connection)
         question = _question_row(question_id)
         _ensure_initial_question_revision(connection, question)
         connection.commit()
@@ -882,7 +884,7 @@ def edit_question(question_id):
         )
 
     try:
-        connection.execute("BEGIN IMMEDIATE")
+        begin_write_transaction(connection)
         current = _question_row(question_id)
         _ensure_initial_question_revision(connection, current)
         latest = connection.execute(
@@ -1005,7 +1007,7 @@ def restore_question(question_id, revision_number):
     question = _question_row(question_id)
     connection = get_db()
     try:
-        connection.execute("BEGIN IMMEDIATE")
+        begin_write_transaction(connection)
         question = _question_row(question_id)
         _ensure_initial_question_revision(connection, question)
         target = connection.execute(

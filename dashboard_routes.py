@@ -33,7 +33,7 @@ def dashboard():
         SELECT subject, COUNT(*) AS count
         FROM questions
         GROUP BY subject
-        ORDER BY count DESC, subject COLLATE NOCASE
+        ORDER BY count DESC, LOWER(subject)
         """
     ).fetchall()
 

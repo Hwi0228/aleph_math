@@ -14,7 +14,7 @@ Flask 앱을 실행한 다음 **문제 DB 등록**을 눌러 과목, 학년, 단
 
 로그인 후 대시보드에서 전체 공개 문항 수와 과목·단원별 현황, 최근 등록 문제를 확인할 수 있습니다. 개인 폴더 수는 본인 계정 기준으로 표시합니다.
 
-등록된 문제는 SQLite의 `instance/probocr.sqlite3`에 저장됩니다. 기존 DB를 새 문제 서식으로 자동 마이그레이션하며, 이전에 입력한 문제도 보존합니다. 문제 목록과 문항 수에는 실제 저장된 데이터만 표시합니다. SQLite 파일은 Git에 포함되지 않습니다.
+등록된 문제는 설정한 데이터베이스에 저장됩니다. 기본값은 SQLite의 `instance/probocr.sqlite3`이며 기존 SQLite 마이그레이션 동작을 그대로 사용합니다. PostgreSQL을 선택하면 동일한 문제 은행·회원·폴더·수정 이력·임시 저장·개인 메모 스키마를 자동으로 준비합니다. DB 종류는 실행 환경 변수 DATABASE_TYPE으로 선택하며, SQLite와 PostgreSQL은 서로 별도의 데이터 저장소입니다. DB 종류를 바꿔도 기존 데이터가 자동 복사되지는 않으므로 실제 데이터를 옮기려면 별도 백업·이관 절차가 필요합니다.
 
 문제 DB 왼쪽의 **＋ 새 폴더**에서 폴더와 하위 폴더를 만들 수 있습니다. 폴더는 UUID로 식별되고 사용자별로 분리됩니다. 문항을 공개한 뒤 문제 카드의 **문제 더보기**에서 본인 소유 폴더로 이동할 수 있습니다. 개인 메모도 같은 메뉴에서 관리하며, 해당 메모는 작성한 사용자에게만 표시됩니다. 폴더를 선택하면 그 아래 하위 폴더의 문제도 함께 조회됩니다.
 
@@ -55,6 +55,32 @@ Flask 진입점은 `app.py`이며, DB, 인증, 문제/폴더, HWP 파싱은 각�
 
 > 본 제품은 한글과컴퓨터의글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
 
+
+## 데이터베이스 설정
+
+데이터베이스 종류는 앱 화면이 아니라 배포 환경 변수로 설정합니다. 별도 설정이 없으면 기존 SQLite가 기본값입니다.
+
+### SQLite (기본값)
+
+```env
+DATABASE_TYPE=sqlite
+DATABASE_PATH=instance/probocr.sqlite3
+```
+
+DATABASE_PATH는 선택 항목이며 생략하면 instance/probocr.sqlite3를 사용합니다. 기존 SQLite 파일과 자동 마이그레이션 코드는 그대로 유지됩니다.
+
+### PostgreSQL / Neon
+
+```env
+DATABASE_TYPE=postgresql
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require
+```
+
+Neon에서는 웹 앱의 일반 쿼리용 pooled connection string을 DATABASE_URL에 설정합니다. 연결 정보는 Git에 올리지 말고 Render의 Environment Variables에 비밀값으로 등록하세요. PostgreSQL 선택 시 최초 요청에서 HEXORA 테이블과 인덱스를 자동 생성합니다.
+
+Render 배포 명령은 Build Command: pip install -r requirements.txt, Start Command: gunicorn app:app을 사용합니다. FLASK_SECRET_KEY도 Render 환경 변수에 고정해 두어야 합니다.
+
+**주의:** SQLite와 PostgreSQL은 같은 데이터를 공유하지 않습니다. DATABASE_TYPE을 바꾸면 앱이 다른 저장소를 사용하며 기존 DB 데이터는 자동 이관되지 않습니다.
 
 ## 버전 관리
 
