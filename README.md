@@ -147,6 +147,15 @@ Neon에서는 웹 앱의 일반 쿼리용 pooled connection string을 DATABASE_U
 
 Render 배포 명령은 Build Command: pip install -r requirements.txt, Start Command: gunicorn app:app을 사용합니다. FLASK_SECRET_KEY도 Render 환경 변수에 고정해 두어야 합니다.
 
+### 공개 서비스 주소
+
+HEXORA 공개 서비스는 다음 주소에서 이용할 수 있습니다.
+
+- 서비스 주소: https://hexora.kro.kr
+- 문제 DB: https://hexora.kro.kr/questions
+
+Render 서비스의 Custom Domains에 `hexora.kro.kr`을 등록하고 DNS를 연결합니다. DNS의 루트 도메인 A 레코드는 Render에서 안내하는 값(현재 설정: `216.24.57.1`)을 가리키도록 구성합니다. IPv6 AAAA 레코드는 등록하지 않습니다. DNS 전파와 도메인 검증이 완료되면 Render가 HTTPS 인증서를 자동으로 발급·갱신합니다. 도메인 설정을 변경할 때는 Render 대시보드에 표시되는 현재 DNS 안내를 우선 확인하세요.
+
 **주의:** SQLite와 PostgreSQL은 같은 데이터를 공유하지 않습니다. DATABASE_TYPE을 바꾸면 앱이 다른 저장소를 사용하며 기존 DB 데이터는 자동 이관되지 않습니다.
 
 ## 버전 관리
