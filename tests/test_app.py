@@ -1064,3 +1064,13 @@ class ChangelogPageTests(unittest.TestCase):
         )
         self.assertIn("PostgreSQL", html)
         self.assertIn("변경 이력", html)
+
+    def test_changelog_page_loads_shared_sidebar_styles(self):
+        with patch("changelog_routes._fetch_remote_changelog", side_effect=OSError("offline")):
+            response = self.client.get("/changelog")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "/static/styles/shared.css",
+            response.get_data(as_text=True),
+        )
