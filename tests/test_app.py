@@ -164,13 +164,35 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(format_question_number(36), "000010")
         self.assertEqual(format_question_number(71), "00001Z")
 
-    def test_curriculum_standard_endpoint_returns_matched_standards(self):
+    def test_curriculum_standard_endpoint_returns_all_course_standards_for_selection(self):
         response = self.client.get(
-            "/curriculum/standards?curriculum=2015%20개정%20교육과정&course=수학Ⅱ&unit=함수의%20극한"
+            "/curriculum/standards?curriculum=2015%20개정%20교육과정&course=수학Ⅱ"
         )
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
+        self.assertGreater(len(payload["standards"]), 1)
         self.assertIn("[12수학Ⅱ01-01]", payload["standards"][0])
+        self.assertTrue(any("[12수학Ⅱ02-01]" in item for item in payload["standards"]))
+
+    def test_question_can_be_created_without_a_unit(self):
+        form = self.valid_question()
+        form.pop("unit")
+        form["achievement_standard"] = (
+            "[12수학Ⅱ02-01] 미분계수의 뜻을 알고, 그 값을 구할 수 있다."
+        )
+        response = self.csrf_post(self.client, "/questions/new", data=form)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.query_one("SELECT unit FROM questions WHERE id = 1"), "")
+        self.assertIn("[12수학Ⅱ02-01]", self.query_one(
+            "SELECT achievement_standard FROM questions WHERE id = 1"
+        ))
+
+    def test_question_form_uses_a_selectable_standard_list(self):
+        response = self.client.get("/questions/new")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'id="achievement-standard-options"', response.data)
+        self.assertIn(b'code.className = "standard-code"', response.data)
+        self.assertNotIn("단원 <span".encode(), response.data)
 
     def test_personal_question_notes_are_private_to_each_member(self):
         self.csrf_post(self.client, "/questions/new", data=self.valid_question())
