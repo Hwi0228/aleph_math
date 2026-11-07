@@ -486,7 +486,20 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertIn("임시 저장".encode(), form_response.data)
         self.assertIn(b"quill@2.0.3", form_response.data)
         self.assertIn(b'id="math-input-dialog"', form_response.data)
+        self.assertIn("한컴 한/글 수식".encode(), form_response.data)
+        self.assertIn(b'id="math-input-format"', form_response.data)
         self.assertNotIn(b"window.prompt(", form_response.data)
+
+    def test_hancom_math_input_endpoint_converts_to_latex(self):
+        with self.client.session_transaction() as user_session:
+            csrf = user_session["csrf_token"]
+        response = self.client.post("/questions/math/convert-hancom", json={"expression": r"{a+b} over {c}"}, headers={"X-CSRF-Token": csrf})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["latex"], r"\\frac{ a+b } { c }")
+        empty = self.client.post("/questions/math/convert-hancom", json={"expression": "   "}, headers={"X-CSRF-Token": csrf})
+        self.assertEqual(empty.status_code, 400)
+        too_long = self.client.post("/questions/math/convert-hancom", json={"expression": "x" * 5001}, headers={"X-CSRF-Token": csrf})
+        self.assertEqual(too_long.status_code, 400)
 
     def test_only_user_created_uuid_folders_and_nested_folders_appear(self):
         empty_response = self.client.get("/questions")

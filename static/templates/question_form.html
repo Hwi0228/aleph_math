@@ -282,11 +282,12 @@
   <div class="math-dialog-backdrop" id="math-input-dialog" hidden>
     <section class="math-dialog" role="dialog" aria-modal="true" aria-labelledby="math-dialog-title">
       <form id="math-input-form">
-        <h2 id="math-dialog-title">LaTeX 수식 입력</h2>
+        <h2 id="math-dialog-title">수식 입력</h2>
+        <label for="math-input-format">입력 형식</label>
+        <select id="math-input-format"><option value="latex">LaTeX</option><option value="hancom">한컴 한/글 수식</option></select>
         <label for="math-latex-input">수식 코드</label>
-        <input id="math-latex-input" type="text" autocomplete="off" spellcheck="false"
-               placeholder="예: \\frac{1}{2} 또는 x^2 + 1">
-        <p>LaTeX 문법으로 입력하세요. 예: \\sqrt{x}, \\frac{a}{b}</p>
+        <input id="math-latex-input" type="text" autocomplete="off" spellcheck="false" placeholder="예: \\frac{1}{2} 또는 x^2 + 1">
+        <p id="math-input-help">LaTeX 문법으로 입력하세요. 예: \\sqrt{x}, \\frac{a}{b}</p>
         <div class="math-dialog-actions">
           <button class="button" id="math-input-cancel" type="button">취소</button>
           <button class="button primary" type="submit">삽입</button>
@@ -353,6 +354,11 @@
       const mathDialog = document.getElementById("math-input-dialog");
       const mathDialogForm = document.getElementById("math-input-form");
       const mathInput = document.getElementById("math-latex-input");
+      const mathFormat = document.getElementById("math-input-format");
+      const mathHelp = document.getElementById("math-input-help");
+      const mathSubmit = mathDialogForm.querySelector('button[type="submit"]');
+      const csrfToken = form.querySelector('[name="_csrf_token"]').value;
+      const hancomConvertUrl = {{ url_for("convert_hancom_math")|tojson }};
       const mathCancel = document.getElementById("math-input-cancel");
       let mathDialogAction = null;
 
@@ -363,6 +369,8 @@
 
       function openMathDialog(initialValue, action) {
         mathInput.value = initialValue || "";
+        mathFormat.value = "latex";
+        updateMathInputHelp();
         mathDialogAction = action;
         mathDialog.hidden = false;
         requestAnimationFrame(() => {
@@ -371,18 +379,31 @@
         });
       }
 
-      mathDialogForm.addEventListener("submit", (event) => {
+      function updateMathInputHelp() {
+        const isHancom = mathFormat.value === "hancom";
+        mathInput.placeholder = isHancom ? "예: {a} over {b} 또는 sqrt {x}" : "예: \\frac{1}{2} 또는 x^2 + 1";
+        mathHelp.textContent = isHancom ? "한컴 한/글 수식 편집기의 스크립트 문법으로 입력하세요. 삽입 전에 LaTeX로 변환됩니다." : "LaTeX 문법으로 입력하세요. 예: \\sqrt{x}, \\frac{a}{b}";
+      }
+      mathFormat.addEventListener("change", updateMathInputHelp);
+      mathDialogForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const latex = mathInput.value.trim();
-        if (!latex) {
-          mathInput.setCustomValidity("LaTeX 수식을 입력해 주세요.");
-          mathInput.reportValidity();
-          return;
-        }
+        const source = mathInput.value.trim();
+        if (!source) { mathInput.setCustomValidity("수식 코드를 입력해 주세요."); mathInput.reportValidity(); return; }
         mathInput.setCustomValidity("");
         const action = mathDialogAction;
-        closeMathDialog();
-        if (action) action(latex);
+        let latex = source;
+        mathSubmit.disabled = true;
+        try {
+          if (mathFormat.value === "hancom") {
+            const response = await fetch(hancomConvertUrl, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken }, body: JSON.stringify({ expression: source }) });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || "한컴 수식을 변환하지 못했습니다.");
+            latex = result.latex;
+          }
+          closeMathDialog();
+          if (action) action(latex);
+        } catch (error) { window.alert(error.message || "수식 변환 중 오류가 발생했습니다."); }
+        finally { mathSubmit.disabled = false; }
       });
       mathInput.addEventListener("input", () => mathInput.setCustomValidity(""));
       mathCancel.addEventListener("click", closeMathDialog);
