@@ -277,6 +277,54 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login", response.headers["Location"])
 
+    def test_katex_math_is_present_in_question_database_and_dashboard_previews(self):
+        math_prompt = (
+            "<p>인라인 수식 \\(x^2 + 1\\)</p>"
+            "<p>블록 수식 $$\\frac{1}{2}$$</p>"
+        )
+        self.csrf_post(
+            self.client,
+            "/questions/new",
+            data=self.valid_question(prompt=math_prompt),
+        )
+
+        # The current authoring form does not expose separate passage/examples fields.
+        # Seed those legacy columns directly to exercise the dashboard's preview path.
+        connection = sqlite3.connect(self.database)
+        try:
+            connection.execute(
+                "UPDATE questions SET passage = ?, examples = ? WHERE id = 1",
+                (
+                    "<p>지문 수식 $a^2+b^2$</p>",
+                    "<p>보기 수식 \\\\[x=3\\\\]</p>",
+                ),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        database_response = self.client.get("/questions")
+        dashboard_response = self.client.get("/")
+        self.assertEqual(database_response.status_code, 200)
+        self.assertEqual(dashboard_response.status_code, 200)
+
+        for response in (database_response, dashboard_response):
+            self.assertIn(b"math-content", response.data)
+            self.assertIn(b"katex@0.16.22/dist/katex.min.js", response.data)
+            self.assertIn(b"katex@0.16.22/dist/contrib/auto-render.min.js", response.data)
+            self.assertIn(b"renderMathInElement", response.data)
+            self.assertIn(b"throwOnError", response.data)
+            self.assertIn(b'{ left: "$$", right: "$$", display: true }', response.data)
+            self.assertIn(b'{ left: "$", right: "$", display: false }', response.data)
+            self.assertNotIn(b'{ left: "$", right: "$", display: true }', response.data)
+            self.assertIn(r"\(x^2 + 1\)".encode("utf-8"), response.data)
+            self.assertIn(r"$$\dfrac{1}{2}$$".encode("utf-8"), response.data)
+
+        self.assertIn("인라인 수식".encode("utf-8"), database_response.data)
+        self.assertIn("인라인 수식".encode("utf-8"), dashboard_response.data)
+        self.assertIn("지문 수식".encode("utf-8"), dashboard_response.data)
+        self.assertIn("보기 수식".encode("utf-8"), dashboard_response.data)
+
     def test_dashboard_shows_recent_questions_and_links_to_question_database(self):
         self.csrf_post(
             self.client,
@@ -965,7 +1013,7 @@ class EditorFrontendRegressionTests(unittest.TestCase):
         self.assertIn("window.renderMathInElement", template)
         self.assertIn('document.querySelectorAll(".math-content")', template)
         self.assertIn('document.addEventListener("DOMContentLoaded", renderQuestionMath', template)
-        self.assertIn('{ left: "$", right: "$", display: true }', template)
+        self.assertIn('{ left: "$$", right: "$$", display: true }', template)
 
     def test_quill_math_objects_have_no_editor_border_or_background(self):
         stylesheet = (

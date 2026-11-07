@@ -86,11 +86,11 @@
                   </div>
                   <div class="question-preview">
                     {% if question.passage %}
-                    <div class="preview-block"><span class="preview-label">지문</span>{{ question.passage|safe }}</div>
+                    <div class="preview-block"><span class="preview-label">지문</span><div class="math-content">{{ question.passage|safe }}</div></div>
                     {% endif %}
-                    <div class="preview-block"><span class="preview-label">문제</span>{{ question.prompt|safe }}</div>
+                    <div class="preview-block"><span class="preview-label">문제</span><div class="math-content">{{ question.prompt|safe }}</div></div>
                     {% if question.examples %}
-                    <div class="preview-block"><span class="preview-label">보기</span>{{ question.examples|safe }}</div>
+                    <div class="preview-block"><span class="preview-label">보기</span><div class="math-content">{{ question.examples|safe }}</div></div>
                     {% endif %}
                     {% if question.choices %}
                     <div class="question-choices">
@@ -172,19 +172,29 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
   <script>
-    window.addEventListener("DOMContentLoaded", () => {
-      if (typeof renderMathInElement === "function") {
-        renderMathInElement(document.body, {
+    function renderDashboardMath() {
+      if (typeof window.renderMathInElement !== "function") {
+        console.error("KaTeX auto-render failed to load.");
+        return;
+      }
+      document.querySelectorAll(".math-content").forEach((element) => {
+        window.renderMathInElement(element, {
           delimiters: [
             { left: "$$", right: "$$", display: true },
             { left: "\\[", right: "\\]", display: true },
             { left: "\\(", right: "\\)", display: false },
             { left: "$", right: "$", display: false }
           ],
-          throwOnError: false
+          throwOnError: false,
+          strict: "ignore"
         });
-      }
-    });
+      });
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", renderDashboardMath, { once: true });
+    } else {
+      renderDashboardMath();
+    }
   </script>
 </body>
 </html>
