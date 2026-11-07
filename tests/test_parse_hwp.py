@@ -119,7 +119,7 @@ class HwpParsingTests(unittest.TestCase):
         )
 
     def test_preserves_original_fraction_commands_when_parsing_hwp(self):
-        xml = """\\
+        xml = """
 <hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"
          xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">
   <hp:tbl><hp:tr><hp:tc><hp:subList>
