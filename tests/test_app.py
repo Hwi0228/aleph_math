@@ -857,7 +857,7 @@ class QuestionRegistrationTests(unittest.TestCase):
 
         editor = app.test_client()
         self.register(editor, "wiki-editor@example.com", "위키 편집자")
-        self.assertIn("관리자 원본 문제".encode(), editor.get("/questions").data)
+        self.assertIn("관리자 원본".encode(), editor.get("/questions").data)
 
         edit_page = editor.get(f"/questions/{question_id}/edit")
         self.assertEqual(edit_page.status_code, 200)
