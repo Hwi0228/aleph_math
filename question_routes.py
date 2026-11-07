@@ -1042,10 +1042,13 @@ def question_history(question_id):
                 before = "\n".join(before or [])
                 after = "\n".join(after or [])
             if before != after:
+                before_value = "" if before is None else str(before)
+                after_value = "" if after is None else str(after)
                 comparison.append({
                     "field": QUESTION_FIELD_LABELS[field],
-                    "before": "" if before is None else str(before),
-                    "after": "" if after is None else str(after),
+                    # Only sanitizer-produced markup reaches the template's safe renderer.
+                    "before_html": render_rich_html(before_value),
+                    "after_html": render_rich_html(after_value),
                 })
 
     return render_template(

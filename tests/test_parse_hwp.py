@@ -159,6 +159,14 @@ class HwpParsingTests(unittest.TestCase):
             r"\begin{aligned} & \text{가입비 15000원} \\ & \text{- 가입 시 추가 요금 없이 무제한 편집 가능} \end{aligned}",
         )
 
+    def test_all_fraction_commands_use_displaystyle_fraction(self):
+        self.assertEqual(
+            normalize_katex_expression(
+                r"\frac{a}{b} + \tfrac{c}{d} + \cfrac{1}{2} + \dfrac{3}{4}"
+            ),
+            r"\dfrac{a}{b} + \dfrac{c}{d} + \dfrac{1}{2} + \dfrac{3}{4}",
+        )
+
     def test_normalizes_legacy_formula_markup_for_existing_db_questions(self):
         self.assertEqual(
             normalize_katex_expression(

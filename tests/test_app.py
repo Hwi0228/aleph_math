@@ -851,7 +851,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.csrf_post(
             self.client,
             "/questions/new",
-            data=self.valid_question(prompt="관리자 원본 문제"),
+            data=self.valid_question(prompt=r"<p>관리자 원본 <strong>문제</strong> $\frac{1}{2}$</p>"),
         )
         question_id = self.query_one("SELECT id FROM questions LIMIT 1")
 
@@ -864,7 +864,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertIn(b'name="base_revision" value="1"', edit_page.data)
 
         form = self.valid_question(
-            prompt="다른 회원이 수정한 문제",
+            prompt=r"<p>다른 회원이 <em>수정한</em> 문제 $\tfrac{2}{3}$</p>",
             explanation="수정한 해설",
         )
         form["base_revision"] = "1"
@@ -887,7 +887,10 @@ class QuestionRegistrationTests(unittest.TestCase):
         finally:
             connection.close()
         self.assertEqual(row[0], self.admin_uuid)
-        self.assertEqual(row[1:], ("다른 회원이 수정한 문제", "수정한 해설"))
+        self.assertEqual(
+            row[1:],
+            (r"<p>다른 회원이 <em>수정한</em> 문제 $\tfrac{2}{3}$</p>", "수정한 해설"),
+        )
         self.assertEqual(revisions, [
             (1, "최초 등록"),
             (2, "문제 문구와 해설 보완"),
@@ -897,6 +900,14 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(history.status_code, 200)
         self.assertIn("위키 편집자".encode(), history.data)
         self.assertIn("변경 비교".encode(), history.data)
+        self.assertIn("<strong>문제</strong>".encode(), history.data)
+        self.assertIn(r"$\dfrac{1}{2}$".encode(), history.data)
+        self.assertIn("<em>수정한</em>".encode(), history.data)
+        self.assertIn(r"$\dfrac{2}{3}$".encode(), history.data)
+        self.assertNotIn(b"&lt;p&gt;관리자 원본", history.data)
+        self.assertNotIn(b"&lt;p&gt;다른 회원이", history.data)
+        self.assertIn(b"class=" + b'"value before math-content"', history.data)
+        self.assertIn(b"scripts/katex-render.js", history.data)
 
         self.csrf_post(self.client, f"/questions/{question_id}/restore/1")
         connection = sqlite3.connect(self.database)
