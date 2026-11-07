@@ -921,7 +921,7 @@ class QuestionRegistrationTests(unittest.TestCase):
             ).fetchone()[0]
         finally:
             connection.close()
-        self.assertEqual(prompt, "관리자 원본 문제")
+        self.assertEqual(prompt, r"<p>관리자 원본 <strong>문제</strong> $\frac{1}{2}$</p>")
         self.assertEqual(count, 3)
 
     def test_stale_question_edit_is_rejected(self):
