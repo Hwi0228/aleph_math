@@ -179,7 +179,7 @@ def _question_paragraphs(questions, title, include_answers):
             answer = " ".join(answer_lines) if answer_lines else "미기재"
             add(f"QUESTION {number:02d}  ·  정답: {answer}", char_style="45")
             if explanation_lines:
-                add("해설", char_style="23")
+                add("해설:", char_style="23")
                 for line in explanation_lines:
                     add(line)
             add("────────────────────────────────────────", char_style="26")
