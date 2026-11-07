@@ -491,6 +491,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertNotIn(b"window.prompt(", form_response.data)
 
     def test_hancom_math_input_endpoint_converts_to_latex(self):
+        self.client.get("/questions/new")
         with self.client.session_transaction() as user_session:
             csrf = user_session["csrf_token"]
         response = self.client.post("/questions/math/convert-hancom", json={"expression": r"{a+b} over {c}"}, headers={"X-CSRF-Token": csrf})
