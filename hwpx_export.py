@@ -83,12 +83,16 @@ def _choice_text(value):
     return re.sub(r"^\s*(?:[①②③④⑤]|[0-9]{1,2}[.)])\s*", "", text)
 
 
-def _question_paragraphs(questions, include_answers):
+def _question_paragraphs(questions, title, include_answers):
     paragraphs = []
 
-    def add(value, page_break=False):
-        if value is not None:
-            paragraphs.append((str(value), page_break))
+    def add(text, *, char_style="17", para_style="19", page_break=False):
+        paragraphs.append({
+            "text": str(text or ""),
+            "char_style": str(char_style),
+            "para_style": str(para_style),
+            "page_break": bool(page_break),
+        })
 
     subjects = list(dict.fromkeys(
         str(question.get("subject") or "").strip()
@@ -100,40 +104,45 @@ def _question_paragraphs(questions, include_answers):
         for question in questions
         if str(question.get("grade") or "").strip()
     ))
-    add("과목: " + " / ".join(subjects))
-    add("학년: " + " / ".join(grades))
-    add("이름: ____________________    반: ______    번호: ______    점수: ______")
+
+    # Cover heading uses the original template's accent character styles.
+    add("HEXORA", char_style="21", para_style="39")
+    add("MATHEMATICS  ·  ASSESSMENT", char_style="46", para_style="57")
+    add(title, char_style="15", para_style="39")
+    add("  ·  ".join(value for value in (
+        "과목: " + " / ".join(subjects) if subjects else "",
+        "학년: " + " / ".join(grades) if grades else "",
+    ) if value), char_style="23", para_style="57")
+    add("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", char_style="4", para_style="39")
+    add("이름: ____________________     반: ______     번호: ______     점수: ______", char_style="24")
+    add("안내  ·  각 문항의 조건과 보기를 확인한 뒤 답을 작성하세요.", char_style="26")
     add("")
 
     for number, question in enumerate(questions, start=1):
-        if question.get("title"):
-            add(str(question["title"]).strip())
-
-        passage_lines = rich_text_to_lines(question.get("passage"))
-        if passage_lines:
-            add("〈지문〉")
-            for line in passage_lines:
-                add(line)
-
-        prompt_lines = rich_text_to_lines(question.get("prompt"))
         points = question.get("points")
         point_label = ""
         try:
             if points is not None and int(points) > 0:
-                point_label = f" [{int(points)}점]"
+                point_label = f"  ·  {int(points)}점"
         except (TypeError, ValueError):
             pass
 
-        if prompt_lines:
-            add(f"{number}. {prompt_lines[0]}{point_label}")
-            for line in prompt_lines[1:]:
+        add(f"QUESTION {number:02d}{point_label}", char_style="45")
+        if question.get("title"):
+            add(str(question["title"]).strip(), char_style="23")
+
+        passage_lines = rich_text_to_lines(question.get("passage"))
+        if passage_lines:
+            add("〈지문〉", char_style="23")
+            for line in passage_lines:
                 add(line)
-        else:
-            add(f"{number}.{point_label}")
+
+        for line in rich_text_to_lines(question.get("prompt")):
+            add(line)
 
         example_lines = rich_text_to_lines(question.get("examples"))
         if example_lines:
-            add("〈보기〉")
+            add("〈보기〉", char_style="23")
             for line in example_lines:
                 add(line)
 
@@ -152,18 +161,28 @@ def _question_paragraphs(questions, include_answers):
             for line_index, line in enumerate(rich_text_to_lines(_choice_text(choice))):
                 add(f"{label} {line}" if line_index == 0 else f"   {line}")
 
+        add("────────────────────────────────────────", char_style="26")
         add("")
 
     if include_answers:
-        add("정답 및 해설", page_break=True)
+        add(
+            "ANSWER KEY  ·  TEACHER COPY",
+            char_style="46",
+            para_style="39",
+            page_break=True,
+        )
+        add("정답 및 해설", char_style="15", para_style="39")
+        add("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", char_style="4", para_style="39")
         for number, question in enumerate(questions, start=1):
             answer_lines = rich_text_to_lines(question.get("answer"))
             explanation_lines = rich_text_to_lines(question.get("explanation"))
-            add(f"{number}. 정답: {' '.join(answer_lines) if answer_lines else '미기재'}")
+            answer = " ".join(answer_lines) if answer_lines else "미기재"
+            add(f"QUESTION {number:02d}  ·  정답: {answer}", char_style="45")
             if explanation_lines:
-                add("해설:")
+                add("해설", char_style="23")
                 for line in explanation_lines:
                     add(line)
+            add("────────────────────────────────────────", char_style="26")
             add("")
 
     return paragraphs
@@ -228,21 +247,38 @@ def _build_section_xml(questions, title, include_answers):
 
     next_id = 1000000002
 
-    def append_paragraph(text, page_break=False):
+    def append_paragraph(
+        paragraph_text,
+        *,
+        char_style="17",
+        para_style="19",
+        page_break=False,
+    ):
         nonlocal next_id
         paragraph = ET.SubElement(section, f"{{{_HP}}}p", {
-            "id": str(next_id), "paraPrIDRef": "19", "styleIDRef": "21",
+            "id": str(next_id),
+            "paraPrIDRef": str(para_style),
+            "styleIDRef": "21",
             "pageBreak": "1" if page_break else "0",
-            "columnBreak": "0", "merged": "0",
+            "columnBreak": "0",
+            "merged": "0",
         })
         next_id += 1
-        run = ET.SubElement(paragraph, f"{{{_HP}}}run", {"charPrIDRef": "17"})
+        run = ET.SubElement(
+            paragraph,
+            f"{{{_HP}}}run",
+            {"charPrIDRef": str(char_style)},
+        )
         text_node = ET.SubElement(run, f"{{{_HP}}}t")
-        text_node.text = text
+        text_node.text = str(paragraph_text or "")
 
-    append_paragraph(title)
-    for text, page_break in _question_paragraphs(questions, include_answers):
-        append_paragraph(text, page_break=page_break)
+    for paragraph in _question_paragraphs(questions, title, include_answers):
+        append_paragraph(
+            paragraph["text"],
+            char_style=paragraph["char_style"],
+            para_style=paragraph["para_style"],
+            page_break=paragraph["page_break"],
+        )
 
     return ET.tostring(section, encoding="utf-8", xml_declaration=True)
 

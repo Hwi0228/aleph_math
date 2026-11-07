@@ -131,13 +131,35 @@ class ExamExportRouteTests(unittest.TestCase):
             "".join(node.text or "" for node in paragraph.iter(f"{{{HP}}}t"))
             for paragraph in section_root.findall(f"{{{HP}}}p")
         ]
-        question_paragraphs = [
+        question_headers = [
             paragraph for paragraph in paragraphs
-            if paragraph.startswith(("1.", "2."))
+            if paragraph.startswith("QUESTION ")
         ]
-        self.assertEqual(len(question_paragraphs), 2)
-        self.assertTrue(question_paragraphs[0].startswith("1. 두 번째 문제"))
-        self.assertTrue(question_paragraphs[1].startswith("2. 첫 번째 문제"))
+        self.assertEqual(len(question_headers), 2)
+        self.assertTrue(question_headers[0].startswith("QUESTION 01"))
+        self.assertTrue(question_headers[1].startswith("QUESTION 02"))
+        self.assertLess(text.index("QUESTION 01"), text.index("두 번째 문제"))
+        self.assertLess(text.index("QUESTION 02"), text.index("첫 번째 문제"))
+        self.assertIn("HEXORA", text)
+        self.assertIn("MATHEMATICS  ·  ASSESSMENT", text)
+        self.assertIn("이름:", text)
+        self.assertIn("〈지문〉", text)
+        self.assertIn("〈보기〉", text)
+
+        styled_text = []
+        for paragraph in section_root.findall(f"{{{HP}}}p"):
+            paragraph_text = "".join(
+                node.text or "" for node in paragraph.iter(f"{{{HP}}}t")
+            )
+            for run in paragraph.findall(f"{{{HP}}}run"):
+                styled_text.append((run.get("charPrIDRef"), paragraph_text))
+            if paragraph_text == "HEXORA":
+                self.assertEqual(paragraph.get("paraPrIDRef"), "39")
+        self.assertIn(("21", "HEXORA"), styled_text)
+        self.assertTrue(any(
+            char_style == "45" and paragraph_text.startswith("QUESTION 01")
+            for char_style, paragraph_text in styled_text
+        ))
 
     def test_teacher_export_can_include_answer_and_explanation(self):
         question_id = self.add_question("<p>교사용 문항</p>", "④")
@@ -148,6 +170,19 @@ class ExamExportRouteTests(unittest.TestCase):
         self.assertIn("정답: ④", text)
         self.assertIn("해설:", text)
         self.assertIn("해설 ④", text)
+        with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
+            section_root = ET.fromstring(archive.read("Contents/section0.xml"))
+        answer_heading = next(
+            paragraph
+            for paragraph in section_root.findall(f"{{{HP}}}p")
+            if "".join(node.text or "" for node in paragraph.iter(f"{{{HP}}}t"))
+            == "ANSWER KEY  ·  TEACHER COPY"
+        )
+        self.assertEqual(answer_heading.get("pageBreak"), "1")
+        self.assertEqual(
+            answer_heading.find(f"{{{HP}}}run").get("charPrIDRef"),
+            "46",
+        )
 
     def test_exam_export_rejects_empty_or_missing_selection(self):
         empty = self.client.post(
