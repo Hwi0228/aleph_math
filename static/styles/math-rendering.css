@@ -1,0 +1,52 @@
+.math-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.math-content .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.15rem 0;
+}
+
+.math-content .katex {
+  white-space: normal;
+}
+
+.math-content.math-render-error {
+  outline: 1px dashed #c77735;
+  outline-offset: 3px;
+}
+
+.katex-load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e4b978;
+  border-radius: 10px;
+  background: #fff8eb;
+  color: #744816;
+  font-size: 0.9rem;
+}
+
+.katex-load-error button {
+  flex: 0 0 auto;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid #c98d43;
+  border-radius: 7px;
+  background: #fff;
+  color: #744816;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .katex-load-error {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

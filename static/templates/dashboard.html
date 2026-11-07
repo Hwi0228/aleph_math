@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f4f7fa">
   <title>Dashboard | HEXORA</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/math-rendering.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
@@ -95,7 +95,7 @@
                     {% if question.choices %}
                     <div class="question-choices">
                       {% for choice in question.choices %}
-                      <div class="question-choice">{{ ['①', '②', '③', '④', '⑤'][loop.index0] if loop.index0 < 5 else loop.index ~ '.' }} {{ choice }}</div>
+                      <div class="question-choice math-content"><span class="choice-number">{{ ['①', '②', '③', '④', '⑤'][loop.index0] if loop.index0 < 5 else loop.index ~ '.' }}</span>{{ choice|safe }}</div>
                       {% endfor %}
                     </div>
                     {% endif %}
@@ -169,32 +169,6 @@
       </div>
     </main>
   </div>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
-  <script>
-    function renderDashboardMath() {
-      if (typeof window.renderMathInElement !== "function") {
-        console.error("KaTeX auto-render failed to load.");
-        return;
-      }
-      document.querySelectorAll(".math-content").forEach((element) => {
-        window.renderMathInElement(element, {
-          delimiters: [
-            { left: "$$", right: "$$", display: true },
-            { left: "\\[", right: "\\]", display: true },
-            { left: "\\(", right: "\\)", display: false },
-            { left: "$", right: "$", display: false }
-          ],
-          throwOnError: false,
-          strict: "ignore"
-        });
-      });
-    }
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", renderDashboardMath, { once: true });
-    } else {
-      renderDashboardMath();
-    }
-  </script>
+  <script defer src="{{ url_for('static', filename='scripts/katex-render.js') }}"></script>
 </body>
 </html>

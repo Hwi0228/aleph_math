@@ -292,11 +292,17 @@ class QuestionRegistrationTests(unittest.TestCase):
         # Seed those legacy columns directly to exercise the dashboard's preview path.
         connection = sqlite3.connect(self.database)
         try:
+            math_choice = (
+                '<p>선택지 수식 '
+                '<span class="ql-math-inline" data-latex="x^2">'
+                '<span class="katex">rendered option</span></span></p>'
+            )
             connection.execute(
-                "UPDATE questions SET passage = ?, examples = ? WHERE id = 1",
+                "UPDATE questions SET passage = ?, examples = ?, choices = ? WHERE id = 1",
                 (
                     "<p>지문 수식 $a^2+b^2$</p>",
-                    "<p>보기 수식 \\\\[x=3\\\\]</p>",
+                    "<p>보기 수식 \\[x=3\\]</p>",
+                    json.dumps([math_choice], ensure_ascii=False),
                 ),
             )
             connection.commit()
@@ -310,20 +316,30 @@ class QuestionRegistrationTests(unittest.TestCase):
 
         for response in (database_response, dashboard_response):
             self.assertIn(b"math-content", response.data)
-            self.assertIn(b"katex@0.16.22/dist/katex.min.js", response.data)
-            self.assertIn(b"katex@0.16.22/dist/contrib/auto-render.min.js", response.data)
-            self.assertIn(b"renderMathInElement", response.data)
-            self.assertIn(b"throwOnError", response.data)
-            self.assertIn(b'{ left: "$$", right: "$$", display: true }', response.data)
-            self.assertIn(b'{ left: "$", right: "$", display: false }', response.data)
-            self.assertNotIn(b'{ left: "$", right: "$", display: true }', response.data)
+            self.assertIn(b"styles/math-rendering.css", response.data)
+            self.assertIn(b"scripts/katex-render.js", response.data)
+            self.assertNotIn(b"katex@0.16.22/dist/katex.min.js", response.data)
             self.assertIn(r"\(x^2 + 1\)".encode("utf-8"), response.data)
             self.assertIn(r"$$\dfrac{1}{2}$$".encode("utf-8"), response.data)
+
+        root = Path(__file__).resolve().parents[1]
+        renderer = (root / "static/scripts/katex-render.js").read_text(encoding="utf-8")
+        self.assertIn("window.renderMathInElement", renderer)
+        self.assertIn("cdn.jsdelivr.net/npm/katex@", renderer)
+        self.assertIn("cdnjs.cloudflare.com/ajax/libs/KaTeX/", renderer)
+        self.assertIn("unpkg.com/katex@", renderer)
+        self.assertIn("loadStylesheet", renderer)
+        self.assertIn("loadEngine", renderer)
+        self.assertIn("katex-load-error", renderer)
+        self.assertIn('window.addEventListener("online"', renderer)
 
         self.assertIn("인라인 수식".encode("utf-8"), database_response.data)
         self.assertIn("인라인 수식".encode("utf-8"), dashboard_response.data)
         self.assertIn("지문 수식".encode("utf-8"), dashboard_response.data)
         self.assertIn("보기 수식".encode("utf-8"), dashboard_response.data)
+        self.assertIn("선택지 수식 $x^2$".encode("utf-8"), dashboard_response.data)
+        self.assertIn(b'class="question-choice math-content"', dashboard_response.data)
+        self.assertNotIn(b"&lt;span class=\"ql-math-inline\"", dashboard_response.data)
 
     def test_dashboard_shows_recent_questions_and_links_to_question_database(self):
         self.csrf_post(
@@ -585,7 +601,7 @@ class QuestionRegistrationTests(unittest.TestCase):
         for value in ("고2", "미분", "지문", "보기", "문제 내용", "답", "직접 등록한 출처"):
             self.assertIn(value.encode(), response.data)
         self.assertIn("$$x + 1$$".encode(), response.data)
-        self.assertIn("katex@0.16.22".encode(), response.data)
+        self.assertIn("scripts/katex-render.js".encode(), response.data)
 
         connection = sqlite3.connect(self.database)
         try:
@@ -673,14 +689,23 @@ class QuestionRegistrationTests(unittest.TestCase):
         finally:
             connection.close()
 
-    def test_math_delimiters_are_configured_on_question_list(self):
+    def test_math_delimiters_are_configured_in_shared_renderer(self):
         response = self.client.get("/questions")
         html = response.get_data(as_text=True)
+        renderer = (
+            Path(__file__).resolve().parents[1]
+            / "static"
+            / "scripts"
+            / "katex-render.js"
+        ).read_text(encoding="utf-8")
 
-        self.assertIn("katex.min.css", html)
-        self.assertIn("auto-render.min.js", html)
-        self.assertIn('left: "\\\\("', html)
-        self.assertIn('left: "$"', html)
+        self.assertIn("math-rendering.css", html)
+        self.assertIn("katex-render.js", html)
+        self.assertIn('{ left: "$$", right: "$$", display: true }', renderer)
+        self.assertIn('{ left: "$", right: "$", display: false }', renderer)
+        self.assertIn(r'{ left: "\\(", right: "\\)", display: false }', renderer)
+        self.assertIn(r'{ left: "\\[", right: "\\]", display: true }', renderer)
+
 
     def test_quill_math_embeds_are_stored_as_latex_text_and_rendered_in_question_bank(self):
         prompt_html = (
@@ -709,8 +734,8 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertEqual(question_response.status_code, 200)
         self.assertIn("$x^2 + 1$".encode(), question_response.data)
         self.assertIn("$$y = x + 2$$".encode(), question_response.data)
-        self.assertIn(b"window.renderMathInElement", question_response.data)
-        self.assertIn(b'document.querySelectorAll(".math-content")', question_response.data)
+        self.assertIn(b"scripts/katex-render.js", question_response.data)
+        self.assertIn(b'class="math-content"', question_response.data)
 
     def test_question_text_is_html_escaped(self):
         self.csrf_post(
@@ -1007,13 +1032,22 @@ class EditorFrontendRegressionTests(unittest.TestCase):
         self.assertIn("background: #F7FAFC;", stylesheet)
         self.assertIn("border: 1px solid #D8E2EC;", stylesheet)
 
-    def test_question_bank_renders_katex_per_question_content_container(self):
+    def test_question_bank_uses_the_shared_katex_loader(self):
         root = Path(__file__).resolve().parents[1]
         template = (root / "static/templates/main.html").read_text(encoding="utf-8")
-        self.assertIn("window.renderMathInElement", template)
-        self.assertIn('document.querySelectorAll(".math-content")', template)
-        self.assertIn('document.addEventListener("DOMContentLoaded", renderQuestionMath', template)
-        self.assertIn('{ left: "$$", right: "$$", display: true }', template)
+        dashboard = (root / "static/templates/dashboard.html").read_text(encoding="utf-8")
+        renderer = (root / "static/scripts/katex-render.js").read_text(encoding="utf-8")
+
+        self.assertIn("scripts/katex-render.js", template)
+        self.assertIn("scripts/katex-render.js", dashboard)
+        question_form = (root / "static/templates/question_form.html").read_text(encoding="utf-8")
+        self.assertIn("scripts/katex-render.js", question_form)
+        self.assertIn('document.querySelectorAll(".math-content")', renderer)
+        self.assertIn("window.renderMathInElement", renderer)
+        self.assertIn("katex-load-error", renderer)
+        self.assertNotIn("katex@0.16.22", template)
+        self.assertNotIn("katex@0.16.22", dashboard)
+
 
     def test_quill_math_objects_have_no_editor_border_or_background(self):
         stylesheet = (

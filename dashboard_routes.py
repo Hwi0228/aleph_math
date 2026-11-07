@@ -6,6 +6,7 @@ from auth import login_required
 from constants import NAV_ITEMS
 from database import get_db
 from question_routes import format_question_number, render_rich_html
+from parse_hwp import strip_choice_label
 
 
 def dashboard():
@@ -53,6 +54,10 @@ def dashboard():
             question["choices"] = json.loads(question["choices"] or "[]")
         except (TypeError, json.JSONDecodeError):
             question["choices"] = []
+        question["choices"] = [
+            render_rich_html(strip_choice_label(str(choice or "")))
+            for choice in question["choices"]
+        ]
         question["display_id"] = format_question_number(question["id"])
         for field in ("passage", "prompt", "examples"):
             question[field] = render_rich_html(question[field])
