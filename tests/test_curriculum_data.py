@@ -74,6 +74,19 @@ class CurriculumStandardsFilterTests(unittest.TestCase):
         )
         self.assertTrue(result["matched"])
 
+    def test_returns_all_standards_for_a_course_when_area_is_not_selected(self):
+        result = select_2022_standards(
+            self.records,
+            subject="수학",
+            grade="고1",
+            course="공통수학1",
+        )
+        self.assertEqual(len(result["standards"]), 2)
+        self.assertEqual(
+            result["standards"][0],
+            "[10공수1-01-01] 다항식의 연산 원리를 설명할 수 있다.",
+        )
+
     def test_maps_middle_and_elementary_grade_bands(self):
         middle = select_2022_standards(
             self.records, subject="과학", grade="중2"

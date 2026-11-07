@@ -145,7 +145,7 @@ def select_2022_standards(records, *, subject="", grade="", course="", area=""):
 
     course_records = [
         record for record in base_records
-        if not course or record.get("subject") == course
+        if course and record.get("subject") == course
     ]
     # Keep the source dataset's curriculum order rather than alphabetizing areas.
     areas = list(dict.fromkeys(
@@ -154,7 +154,7 @@ def select_2022_standards(records, *, subject="", grade="", course="", area=""):
 
     matched_records = [
         record for record in course_records
-        if area and record.get("area") == area
+        if not area or record.get("area") == area
     ]
     standards = [
         f'{record["code"]} {record["content"]}'.strip()

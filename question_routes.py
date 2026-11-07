@@ -328,7 +328,7 @@ def _collect_question_data(form):
         errors.append("출처 유형을 선택해 주세요.")
     if data["license"] not in LICENSE_CHOICES:
         errors.append("라이선스를 선택해 주세요.")
-    for field, label in (("grade", "학년"), ("unit", "단원")):
+    for field, label in (("grade", "학년"),):
         if not data[field]:
             errors.append(f"{label}을(를) 입력해 주세요.")
     if not _rich_text_has_content(data["prompt"]):
@@ -426,10 +426,18 @@ def curriculum_standards():
         })
 
     course_data = CURRICULUM_STANDARDS.get(curriculum, {}).get(course, {})
+    if unit:
+        standards = course_data.get(unit, [])
+    else:
+        standards = [
+            standard
+            for unit_standards in course_data.values()
+            for standard in unit_standards
+        ]
     return jsonify({
-        "standards": course_data.get(unit, []),
+        "standards": standards,
         "units": list(course_data.keys()),
-        "matched": bool(course_data.get(unit)),
+        "matched": bool(standards),
     })
 
 
