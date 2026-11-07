@@ -187,11 +187,14 @@ class QuestionRegistrationTests(unittest.TestCase):
             "SELECT achievement_standard FROM questions WHERE id = 1"
         ))
 
-    def test_question_form_uses_a_selectable_standard_list(self):
+    def test_question_form_uses_a_single_select_standard_list(self):
         response = self.client.get("/questions/new")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'id="achievement-standard-options"', response.data)
+        self.assertIn(b'role="radiogroup"', response.data)
+        self.assertIn(b'radio.type = "radio"', response.data)
         self.assertIn(b'code.className = "standard-code"', response.data)
+        self.assertNotIn(b'checkbox.type = "checkbox"', response.data)
         self.assertNotIn("단원 <span".encode(), response.data)
 
     def test_personal_question_notes_are_private_to_each_member(self):

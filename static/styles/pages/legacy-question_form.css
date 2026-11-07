@@ -276,7 +276,7 @@
   cursor: pointer;
 }
 .standard-option:hover { background: #F5F8FB; }
-.standard-option input[type="checkbox"] {
+.standard-option input[type="radio"] {
   width: 15px;
   min-width: 15px;
   min-height: 15px;

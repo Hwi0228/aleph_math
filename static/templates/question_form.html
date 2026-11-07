@@ -133,7 +133,7 @@
               </label>
               <div class="field full standard-box">
                 <label>성취기준 <span class="standard-status" id="standard-status">목록에서 적용할 기준을 선택하세요.</span></label>
-                <div class="standard-options" id="achievement-standard-options" role="group" aria-label="성취기준 목록">
+                <div class="standard-options" id="achievement-standard-options" role="radiogroup" aria-label="성취기준 목록">
                   <p class="standard-empty">과목과 학년을 선택하면 성취기준 목록이 표시됩니다.</p>
                 </div>
                 <textarea name="achievement_standard" id="achievement-standard" maxlength="4000" hidden>{{ form_data.get('achievement_standard', '') }}</textarea>
@@ -514,12 +514,13 @@
     const subjectSelect = form.querySelector('[name="subject"]');
     const subjectCourseOptions = {{ subject_course_options|tojson }};
     const storedStandard = {{ form_data.get('achievement_standard', '')|tojson }};
-    const selectedStandards = new Set(
-      String(storedStandard || "")
+    // Older drafts may contain multiple lines; keep the first value when opening them.
+    const selectedStandard = {
+      value: String(storedStandard || "")
         .split(/\r?\n/)
         .map((value) => value.trim())
-        .filter(Boolean)
-    );
+        .find(Boolean) || ""
+    };
     const is2022Curriculum = () => curriculum.value === "2022 개정 교육과정";
 
     function setSelectOptions(select, values, placeholder, preferredValue) {
@@ -539,14 +540,14 @@
     }
 
     function syncSelectedStandards() {
-      standards.value = Array.from(selectedStandards).join("\n");
-      standardStatus.textContent = selectedStandards.size
-        ? selectedStandards.size + "개 성취기준 선택됨"
+      standards.value = selectedStandard.value;
+      standardStatus.textContent = selectedStandard.value
+        ? "성취기준 1개 선택됨"
         : "적용할 성취기준을 선택하세요.";
     }
 
     function clearSelectedStandards() {
-      selectedStandards.clear();
+      selectedStandard.value = "";
       standards.value = "";
       renderStandards([]);
     }
@@ -568,14 +569,16 @@
         const label = document.createElement("label");
         label.className = "standard-option";
 
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.value = standard;
-        checkbox.checked = selectedStandards.has(standard);
-        checkbox.addEventListener("change", () => {
-          if (checkbox.checked) selectedStandards.add(standard);
-          else selectedStandards.delete(standard);
-          syncSelectedStandards();
+        const radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = "achievement-standard-choice";
+        radio.value = standard;
+        radio.checked = selectedStandard.value === standard;
+        radio.addEventListener("change", () => {
+          if (radio.checked) {
+            selectedStandard.value = standard;
+            syncSelectedStandards();
+          }
         });
 
         const content = document.createElement("span");
@@ -593,7 +596,7 @@
           content.textContent = standard;
         }
 
-        label.append(checkbox, content);
+        label.append(radio, content);
         standardOptions.appendChild(label);
       });
       syncSelectedStandards();
