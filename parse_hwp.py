@@ -98,7 +98,6 @@ def normalize_katex_expression(expression: str) -> str:
         ),
         expression,
     )
-    expression = re.sub(r"\\(?:tfrac|cfrac|frac)\b", r"\\dfrac", expression)
     return expression
 
 

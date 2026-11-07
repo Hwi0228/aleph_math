@@ -320,7 +320,7 @@ class QuestionRegistrationTests(unittest.TestCase):
             self.assertIn(b"scripts/katex-render.js", response.data)
             self.assertNotIn(b"katex@0.16.22/dist/katex.min.js", response.data)
             self.assertIn(r"\(x^2 + 1\)".encode("utf-8"), response.data)
-            self.assertIn(r"$$\dfrac{1}{2}$$".encode("utf-8"), response.data)
+            self.assertIn(r"$$\frac{1}{2}$$".encode("utf-8"), response.data)
 
         root = Path(__file__).resolve().parents[1]
         renderer = (root / "static/scripts/katex-render.js").read_text(encoding="utf-8")
@@ -901,9 +901,9 @@ class QuestionRegistrationTests(unittest.TestCase):
         self.assertIn("위키 편집자".encode(), history.data)
         self.assertIn("변경 비교".encode(), history.data)
         self.assertIn("<strong>문제</strong>".encode(), history.data)
-        self.assertIn(r"$\dfrac{1}{2}$".encode(), history.data)
+        self.assertIn(r"$\frac{1}{2}$".encode(), history.data)
         self.assertIn("<em>수정한</em>".encode(), history.data)
-        self.assertIn(r"$\dfrac{2}{3}$".encode(), history.data)
+        self.assertIn(r"$\tfrac{2}{3}$".encode(), history.data)
         self.assertNotIn("&lt;p&gt;관리자 원본".encode(), history.data)
         self.assertNotIn("&lt;p&gt;다른 회원이".encode(), history.data)
         self.assertIn(b"class=" + b'"value before math-content"', history.data)
