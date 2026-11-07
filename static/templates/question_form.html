@@ -104,8 +104,20 @@
                 </select>
               </label>
               <label class="field">단원 <span class="required">*</span>
-                <input name="unit" id="unit-input" list="unit-options" value="{{ form_data.get('unit', '') }}" placeholder="단원 선택 또는 입력" required>
+                <input name="unit" id="unit-input" list="unit-options" value="{{ form_data.get('unit', '') }}" placeholder="교과서 단원명 입력" required>
                 <datalist id="unit-options"></datalist>
+                <small>교과서의 실제 단원명을 입력하세요.</small>
+              </label>
+              <label class="field full standard-area-field" id="standard-area-field" hidden>
+                교육과정 영역
+                <select id="standard-area-select">
+                  <option value="">영역 선택</option>
+                </select>
+                <small>
+                  2022 개정 교육과정의 공식 영역입니다. 교과서 단원명과는 다를 수 있으며,
+                  영역을 선택하면 해당 성취기준을 불러옵니다.
+                  <a href="https://github.com/greatsong/k-curriculum-2022/tree/v3.0.1" target="_blank" rel="noopener noreferrer">데이터 출처</a>
+                </small>
               </label>
               <label class="field">난이도 <span class="required">*</span>
                 <select name="difficulty" required>
@@ -495,38 +507,96 @@
     const unit = document.getElementById("unit-input");
     const standards = document.getElementById("achievement-standard");
     const standardStatus = document.getElementById("standard-status");
+    const standardAreaField = document.getElementById("standard-area-field");
+    const standardArea = document.getElementById("standard-area-select");
+    const gradeSelect = form.querySelector('[name="grade"]');
     const courseOptions = {{ course_options|tojson }};
     const selectedCourse = {{ form_data.get('course', '')|tojson }};
+    let preferredCourse = selectedCourse;
+    let standardsRequestId = 0;
     const subjectSelect = form.querySelector('[name="subject"]');
     const subjectCourseOptions = {{ subject_course_options|tojson }};
     const selectedUnit = {{ form_data.get('unit', '')|tojson }};
     const storedStandard = {{ form_data.get('achievement_standard', '')|tojson }};
+    const is2022Curriculum = () => curriculum.value === "2022 개정 교육과정";
+
+    function setSelectOptions(select, values, placeholder, preferredValue) {
+      const previous = preferredValue || select.value;
+      select.innerHTML = "";
+      const first = document.createElement("option");
+      first.value = "";
+      first.textContent = placeholder;
+      select.appendChild(first);
+      (values || []).forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+      if ((values || []).includes(previous)) select.value = previous;
+    }
 
     function rebuildCourses() {
       const options = subjectCourseOptions[subjectSelect.value] || [];
-      const previous = course.value || selectedCourse;
-      course.innerHTML = '<option value="">교과 선택</option>';
-      options.forEach((name) => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        course.appendChild(option);
-      });
-      if (options.includes(previous)) course.value = previous;
+      const previous = course.value || preferredCourse;
+      setSelectOptions(course, options, "교과 선택", previous);
     }
 
     async function loadStandards(autofill) {
+      const use2022 = is2022Curriculum();
+      const requestId = ++standardsRequestId;
+      standardAreaField.hidden = !use2022;
+      if (use2022) {
+        standardStatus.textContent = "2022 개정 교육과정 데이터를 준비하고 있습니다.";
+      }
+
       const params = new URLSearchParams({
         curriculum: curriculum.value,
         course: course.value,
-        unit: unit.value
+        unit: unit.value,
+        subject: subjectSelect.value,
+        grade: gradeSelect.value,
+        area: use2022 ? standardArea.value : ""
       });
       try {
         const response = await fetch("{{ url_for('curriculum_standards') }}?" + params.toString(), {
           headers: { "Accept": "application/json" }
         });
-        if (!response.ok) throw new Error("성취기준을 불러오지 못했습니다.");
         const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "성취기준을 불러오지 못했습니다.");
+        }
+        if (requestId !== standardsRequestId) return;
+
+        if (use2022) {
+          const previousCourse = course.value || preferredCourse;
+          const availableCourses = data.courses || [];
+          setSelectOptions(course, availableCourses, "교과 선택", previousCourse);
+          preferredCourse = "";
+
+          if (previousCourse && !availableCourses.includes(previousCourse)) {
+            standardArea.value = "";
+            standards.value = "";
+            standardStatus.textContent = "선택한 학년과 과목에 해당하는 데이터가 없습니다. 과목을 다시 선택해 주세요.";
+            return;
+          }
+
+          const previousArea = standardArea.value;
+          setSelectOptions(standardArea, data.areas || [], "영역 선택", previousArea);
+          if (autofill) {
+            if (standardArea.value && data.standards && data.standards.length) {
+              standards.value = data.standards.join("\n");
+              standardStatus.textContent = "선택한 교육과정 영역의 성취기준을 자동 입력했습니다.";
+            } else {
+              standards.value = "";
+              standardStatus.textContent = "교육과정 영역을 선택하면 연결된 성취기준을 불러옵니다.";
+            }
+          } else if (!standards.value) {
+            standardStatus.textContent = "과목과 교육과정 영역을 선택하면 성취기준을 불러옵니다.";
+          }
+          return;
+        }
+
         const datalist = document.getElementById("unit-options");
         datalist.innerHTML = "";
         (data.units || []).forEach((name) => {
@@ -544,34 +614,57 @@
           }
         }
       } catch (error) {
-        standardStatus.textContent = "자동 입력을 불러오지 못했습니다. 성취기준을 직접 입력할 수 있습니다.";
+        if (requestId !== standardsRequestId) return;
+        standardStatus.textContent = error.message ||
+          "자동 입력을 불러오지 못했습니다. 성취기준을 직접 입력할 수 있습니다.";
       }
     }
 
     rebuildCourses();
-    if (selectedUnit) {
-      unit.value = selectedUnit;
-      if (storedStandard) standards.value = storedStandard;
-    }
+    if (selectedUnit) unit.value = selectedUnit;
+    if (storedStandard) standards.value = storedStandard;
     loadStandards(false);
+
     subjectSelect.addEventListener("change", () => {
-      rebuildCourses();
+      preferredCourse = "";
       course.value = "";
-      standards.value = "";
       unit.value = "";
+      standardArea.value = "";
+      standards.value = "";
+      rebuildCourses();
+      loadStandards(false);
+    });
+    gradeSelect.addEventListener("change", () => {
+      preferredCourse = "";
+      course.value = "";
+      standardArea.value = "";
+      standards.value = "";
+      rebuildCourses();
       loadStandards(false);
     });
     curriculum.addEventListener("change", () => {
-      standards.value = "";
+      preferredCourse = "";
+      course.value = "";
       unit.value = "";
+      standardArea.value = "";
+      standards.value = "";
+      rebuildCourses();
       loadStandards(false);
     });
     course.addEventListener("change", () => {
-      unit.value = "";
+      preferredCourse = "";
+      standardArea.value = "";
       standards.value = "";
       loadStandards(false);
     });
-    unit.addEventListener("change", () => loadStandards(true));
+    standardArea.addEventListener("change", () => loadStandards(true));
+    unit.addEventListener("change", () => {
+      if (!is2022Curriculum()) {
+        loadStandards(true);
+      } else {
+        standardStatus.textContent = "교과서 단원명과 교육과정 영역은 별도 항목입니다.";
+      }
+    });
   </script>
 </body>
 </html>

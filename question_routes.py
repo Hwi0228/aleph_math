@@ -4,12 +4,21 @@ import re
 import uuid
 from html.parser import HTMLParser
 
-from flask import abort, g, jsonify, redirect, render_template, request, url_for
+from pathlib import Path
+
+from flask import abort, current_app, g, jsonify, redirect, render_template, request, url_for
 
 from auth import admin_required, login_required
 from constants import NAV_ITEMS, SUBJECTS
 from database import begin_write_transaction, get_db
 from parse_hwp import normalize_katex_markup, strip_choice_label
+from curriculum_data import (
+    DATASET_URL as CURRICULUM_DATASET_URL,
+    DATASET_VERSION as CURRICULUM_DATASET_VERSION,
+    CurriculumDataError,
+    load_2022_standards,
+    select_2022_standards,
+)
 
 QUESTION_CONTENT_FIELDS = (
     "title", "subject", "grade", "course", "curriculum", "unit",
@@ -378,6 +387,44 @@ def curriculum_standards():
     curriculum = request.args.get("curriculum", "2015 개정 교육과정")
     course = request.args.get("course", "").strip()
     unit = request.args.get("unit", "").strip()
+
+    if curriculum == "2022 개정 교육과정":
+        cache_path = (
+            Path(current_app.instance_path)
+            / "curriculum"
+            / f"standards-{CURRICULUM_DATASET_VERSION}.json"
+        )
+        try:
+            records = load_2022_standards(cache_path)
+        except (CurriculumDataError, OSError):
+            current_app.logger.exception("2022 curriculum dataset could not be loaded")
+            return jsonify({
+                "standards": [],
+                "courses": [],
+                "areas": [],
+                "matched": False,
+                "error": (
+                    "2022 개정 교육과정 데이터를 불러오지 못했습니다. "
+                    "잠시 후 다시 시도하거나 성취기준을 직접 입력해 주세요."
+                ),
+            }), 503
+
+        result = select_2022_standards(
+            records,
+            subject=request.args.get("subject", "").strip(),
+            grade=request.args.get("grade", "").strip(),
+            course=course,
+            area=request.args.get("area", "").strip(),
+        )
+        return jsonify({
+            **result,
+            "units": [],
+            "dataset": {
+                "version": CURRICULUM_DATASET_VERSION,
+                "url": CURRICULUM_DATASET_URL,
+            },
+        })
+
     course_data = CURRICULUM_STANDARDS.get(curriculum, {}).get(course, {})
     return jsonify({
         "standards": course_data.get(unit, []),

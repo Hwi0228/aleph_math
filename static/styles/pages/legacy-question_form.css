@@ -67,6 +67,7 @@
     .standard-box label { color:#526E89; font-size:11px; font-weight:700; }
     .standard-box textarea { min-height:70px; border-color:#D8E6F2; background:#fff; }
     .standard-status { color:#718096; font-size:10px; font-weight:400; }
+.standard-area-field[hidden] { display:none !important; }
     .source-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px 15px; }
     .actions { display:flex; align-items:center; justify-content:flex-end; gap:9px; padding:4px 0 0; }
     .button { display:inline-flex; min-height:39px; align-items:center; justify-content:center; gap:7px; padding:0 16px; border:1px solid #DCE4EC; border-radius:9px; background:#fff; color:#526477; font-size:12px; font-weight:700; text-decoration:none; cursor:pointer; }
@@ -229,3 +230,23 @@
   color: #43566B;
 }
 .rich-editor .ql-editor blockquote p:last-child { margin-bottom: 0; }
+
+
+/* The 2022 curriculum area is distinct from a textbook's unit name. */
+.standard-area-field[hidden] {
+  display: none !important;
+}
+.standard-area-field small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.standard-area-field small a {
+  color: var(--primary);
+  font-weight: 650;
+  text-decoration: none;
+}
+.standard-area-field small a:hover {
+  text-decoration: underline;
+}
