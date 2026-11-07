@@ -193,25 +193,6 @@ def _create_question_notes_table(connection):
 
 
 
-def _migrate_question_fractions(connection):
-    fraction_fields = (
-        "passage",
-        "prompt",
-        "examples",
-        "choices",
-        "answer",
-        "explanation",
-    )
-    for field in fraction_fields:
-        connection.execute(
-            f"""
-            UPDATE questions
-            SET {field} = REPLACE({field}, ?, ?)
-            WHERE {field} LIKE '%' || ? || '%'
-            """,
-            (r"\frac", r"\dfrac", r"\frac"),
-        )
-
 class HybridRow(dict):
     """Mapping-style row that also preserves sqlite3.Row-style integer indexing."""
 
@@ -516,7 +497,6 @@ def initialize_database(connection):
                 "ALTER TABLE questions ADD COLUMN explanation TEXT NOT NULL DEFAULT ''"
             )
         _ensure_question_additional_columns(connection)
-        _migrate_question_fractions(connection)
         _create_indexes(connection)
         _create_question_revision_table(connection)
         _create_question_drafts_table(connection)
@@ -615,7 +595,6 @@ def initialize_database(connection):
             )
 
         _ensure_question_additional_columns(connection)
-        _migrate_question_fractions(connection)
         _create_indexes(connection)
         _create_question_revision_table(connection)
         _create_question_drafts_table(connection)

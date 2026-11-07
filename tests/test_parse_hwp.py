@@ -118,8 +118,8 @@ class HwpParsingTests(unittest.TestCase):
             r"풀이 $\angle \mathrm{C} = 90 ^\circ$",
         )
 
-    def test_converts_every_fraction_to_display_fraction(self):
-        xml = """\
+    def test_preserves_original_fraction_commands_when_parsing_hwp(self):
+        xml = """\\
 <hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"
          xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">
   <hp:tbl><hp:tr><hp:tc><hp:subList>
@@ -137,10 +137,10 @@ class HwpParsingTests(unittest.TestCase):
 
         question = parse_questions_from_xml(xml.encode("utf-8"))[0]
 
-        self.assertIn(r"\dfrac{ 3 } { 4 }", question["question"])
-        self.assertIn(r"\dfrac{ 5 } { 6 }", question["explanation"])
-        self.assertEqual(question["choices"], [r"$\dfrac{ 7 } { 8 }$"])
-        self.assertNotIn(r"\frac", question["question"])
+        self.assertIn(r"\frac{ 3 } { 4 }", question["question"])
+        self.assertIn(r"\frac{ 5 } { 6 }", question["explanation"])
+        self.assertEqual(question["choices"], [r"$\frac{ 7 } { 8 }$"])
+        self.assertNotIn(r"\dfrac", question["question"])
 
     def test_normalizes_hancom_braces_division_and_alignment_for_katex(self):
         brace_formula = _equation_to_latex(
@@ -148,7 +148,7 @@ class HwpParsingTests(unittest.TestCase):
         )
         self.assertEqual(
             brace_formula,
-            r"\left \{ \dfrac{ 4 } { 3 } - \left ( - \dfrac{ 1 } { 3 } \right ) \right \} \div \left ( - \dfrac{ 1 } { 9 } \right )",
+            r"\left \{ \frac{ 4 } { 3 } - \left ( - \frac{ 1 } { 3 } \right ) \right \} \div \left ( - \frac{ 1 } { 9 } \right )",
         )
 
         aligned_formula = _equation_to_latex(

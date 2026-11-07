@@ -70,7 +70,7 @@ class HwpParserRouteTests(unittest.TestCase):
         self.assertIn(b'accept=".hwp,.hwpx,.xml,application/xml,text/xml"', response.data)
         self.assertIn(b'href="/hwp"', self.client.get("/").data)
 
-    def test_existing_question_data_survives_explanation_column_migration(self):
+    def test_existing_question_data_survives_explanation_migration_and_preserves_fractions(self):
         with self.client.session_transaction() as user_session:
             user_uuid = user_session["user_uuid"]
         connection = sqlite3.connect(app.config["DATABASE"])
@@ -107,14 +107,14 @@ class HwpParserRouteTests(unittest.TestCase):
         self.assertEqual(
             row,
             (
-                r"기존 문항 $\dfrac{1}{2}$",
-                json.dumps([r"① $\dfrac{1}{3}$"], ensure_ascii=False),
+                r"기존 문항 $\frac{1}{2}$",
+                json.dumps([r"① $\frac{1}{3}$"], ensure_ascii=False),
                 "",
             ),
         )
         question_response = self.client.get("/questions")
-        self.assertIn(r"\dfrac{1}{2}".encode(), question_response.data)
-        self.assertIn(r"\dfrac{1}{3}".encode(), question_response.data)
+        self.assertIn(r"\frac{1}{2}".encode(), question_response.data)
+        self.assertIn(r"\frac{1}{3}".encode(), question_response.data)
 
     def test_existing_hwp_equations_are_normalized_for_katex_display(self):
         with self.client.session_transaction() as user_session:
