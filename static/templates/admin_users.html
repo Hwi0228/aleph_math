@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#F4F7FA">
-  <title>계정별 데이터 관리 | HEXORA</title>
+  <title>작성자별 문항 현황 | HEXORA</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/pages/legacy-admin_users.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/tokens.css') }}">
@@ -17,8 +17,8 @@
     {% include "partials/sidebar.html" %}
     <main class="admin-main">
       {% set header_section = "ADMINISTRATION" %}
-      {% set header_title = "계정별 데이터 관리" %}
-      {% set header_description = "사용자별 문제 데이터 현황을 확인합니다." %}
+      {% set header_title = "작성자별 문항 현황" %}
+      {% set header_description = "공용 문제 DB의 원작성자별 등록 문항 수를 확인하고, 작성자 기준으로 문항을 조회합니다." %}
       {% include "partials/header.html" %}
       <section class="user-list" aria-label="사용자 계정">
         {% for user in users %}

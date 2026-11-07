@@ -75,14 +75,14 @@
       {% set header_description = "모든 회원이 문항을 함께 탐색·편집하고, 변경 이력을 투명하게 관리합니다." %}
       {% include "partials/header.html" %}
       <header class="results-header">
-        <label class="select-all"><input type="checkbox" aria-label="전체 선택"> 전체 선택{% if questions %} <span class="result-count">{{ "{:,}".format(questions | length) }}</span>{% endif %}</label>
+        <label class="select-all"><input id="select-all-questions" type="checkbox" aria-label="현재 목록 전체 선택"> 전체 선택{% if questions %} <span class="result-count">{{ "{:,}".format(questions | length) }}</span>{% endif %}</label>
         <select class="select-control" aria-label="정렬">
           <option>출처순</option>
         </select>
         {% if can_manage_questions %}<a class="detail-button" href="{{ url_for('new_question') }}">문제 등록</a>{% endif %}
       </header>
       <div class="result-area">
-        {% if current_user.role == 'admin' %}<a class="detail-button" href="{{ url_for('admin_users') }}">계정별 데이터 관리</a>{% endif %}
+        {% if current_user.role == 'admin' %}<a class="detail-button" href="{{ url_for('admin_users') }}">작성자별 문항 현황</a>{% endif %}
         {% if selected_user_uuid != current_user.uuid %}<p class="folder-notice">{{ selected_user.display_name }}님 계정의 문제 조회 중</p>{% endif %}
         {% if added %}<p class="success-message" role="status">문제를 등록했습니다.</p>{% endif %}
         {% if selected_folder_name %}<p class="success-message">{{ selected_folder_name }} 폴더의 문제</p>{% endif %}
@@ -90,7 +90,7 @@
           {% for question in questions %}
           <article class="question-card">
             <div class="card-top">
-              <input class="question-check" type="checkbox" aria-label="문제 선택">
+              <input class="question-check" type="checkbox" form="exam-export-form" name="question_ids" value="{{ question.id }}" aria-label="문제 선택: {{ question.display_id }}">
               <span class="tag question-id-tag">{{ question.display_id }}</span>
               <span class="tag subject">{{ question.subject }}</span>
               {% if question.grade %}<span class="tag">{{ question.grade }}</span>{% endif %}
@@ -156,6 +156,18 @@
     </main>
 
     <aside class="settings" aria-label="문제 선택 설정">
+      <section class="settings-section exam-export-section">
+        <h2 class="settings-heading">시험지 만들기</h2>
+        <form id="exam-export-form" class="settings-content exam-export-form" method="post" action="{{ url_for('export_exam_hwpx') }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <label class="allocation-label" for="exam-title">시험지 제목</label>
+          <input class="settings-input" id="exam-title" name="exam_title" type="text" maxlength="100" value="{{ selected_subject }} 시험지" required>
+          <p class="selection-count" id="selected-question-count" aria-live="polite">0문항 선택</p>
+          <label class="check-row"><input type="checkbox" name="include_answers" value="1"> 정답·해설 포함 (교사용)</label>
+          <button class="primary-button" type="submit" disabled>HWPX 다운로드</button>
+          <p class="settings-hint">현재 목록에서 선택한 문항을 화면에 보이는 순서대로 시험지로 만듭니다.</p>
+        </form>
+      </section>
       <section class="settings-section">
         <button class="settings-heading" type="button" aria-expanded="true"><span aria-hidden="true">ϟ</span> 자동 선택 <span class="chevron">⌄</span></button>
         <div class="settings-content">
@@ -246,6 +258,41 @@
         button.classList.add("selected");
       });
     });
+
+    const questionChecks = Array.from(document.querySelectorAll(".question-check"));
+    const selectAllQuestions = document.getElementById("select-all-questions");
+    const selectedQuestionCount = document.getElementById("selected-question-count");
+    const examExportForm = document.getElementById("exam-export-form");
+    const examExportButton = examExportForm?.querySelector('button[type="submit"]');
+
+    function updateQuestionSelection() {
+      const selectedCount = questionChecks.filter((checkbox) => checkbox.checked).length;
+      if (selectedQuestionCount) {
+        selectedQuestionCount.textContent = selectedCount + "문항 선택";
+      }
+      if (examExportButton) {
+        examExportButton.disabled = selectedCount === 0;
+      }
+      if (selectAllQuestions) {
+        selectAllQuestions.checked = questionChecks.length > 0 && selectedCount === questionChecks.length;
+        selectAllQuestions.indeterminate = selectedCount > 0 && selectedCount < questionChecks.length;
+        selectAllQuestions.disabled = questionChecks.length === 0;
+      }
+      questionChecks.forEach((checkbox) => {
+        checkbox.closest(".question-card")?.classList.toggle("is-selected", checkbox.checked);
+      });
+    }
+
+    selectAllQuestions?.addEventListener("change", () => {
+      questionChecks.forEach((checkbox) => {
+        checkbox.checked = selectAllQuestions.checked;
+      });
+      updateQuestionSelection();
+    });
+    questionChecks.forEach((checkbox) => {
+      checkbox.addEventListener("change", updateQuestionSelection);
+    });
+    updateQuestionSelection();
   </script>
 </body>
 </html>
