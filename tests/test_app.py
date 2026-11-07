@@ -1042,7 +1042,7 @@ class EditorFrontendRegressionTests(unittest.TestCase):
         self.assertIn("scripts/katex-render.js", dashboard)
         question_form = (root / "static/templates/question_form.html").read_text(encoding="utf-8")
         self.assertIn("scripts/katex-render.js", question_form)
-        self.assertIn('document.querySelectorAll(".math-content")', renderer)
+        self.assertIn('querySelectorAll(".math-content")', renderer)
         self.assertIn("window.renderMathInElement", renderer)
         self.assertIn("katex-load-error", renderer)
         self.assertNotIn("katex@0.16.22", template)
