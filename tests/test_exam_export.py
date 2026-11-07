@@ -8,7 +8,6 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from app import app
-from parse_rhwp import parse_questions_from_rhwp_bytes
 
 
 HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
@@ -126,9 +125,19 @@ class ExamExportRouteTests(unittest.TestCase):
         self.assertNotIn("정답: ①", text)
         self.assertNotIn("해설 ①", text)
 
-        parsed = parse_questions_from_rhwp_bytes(response.data, filename="generated-exam.hwpx")
-        self.assertEqual(len(parsed), 2)
-        self.assertIn("두 번째 문제", parsed[0]["question"])
+        with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
+            section_root = ET.fromstring(archive.read("Contents/section0.xml"))
+        paragraphs = [
+            "".join(node.text or "" for node in paragraph.iter(f"{{{HP}}}t"))
+            for paragraph in section_root.findall(f"{{{HP}}}p")
+        ]
+        question_paragraphs = [
+            paragraph for paragraph in paragraphs
+            if paragraph.startswith(("1.", "2."))
+        ]
+        self.assertEqual(len(question_paragraphs), 2)
+        self.assertTrue(question_paragraphs[0].startswith("1. 두 번째 문제"))
+        self.assertTrue(question_paragraphs[1].startswith("2. 첫 번째 문제"))
 
     def test_teacher_export_can_include_answer_and_explanation(self):
         question_id = self.add_question("<p>교사용 문항</p>", "④")
